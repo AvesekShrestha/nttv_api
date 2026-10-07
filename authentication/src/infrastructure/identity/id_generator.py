@@ -12,7 +12,7 @@ class IdGenerator(IIdGenerator):
 
         return f"USR-{timestamp}-{random_part}"
 
-    def generate_ticket_id(self) -> str:
+    def generate_team_member_id(self) -> str:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         random_part = secrets.token_hex(2).upper()
 
@@ -31,6 +31,13 @@ class IdGenerator(IIdGenerator):
         random_part = secrets.token_hex(2).upper()
 
         return f"RFT-{timestamp}-{random_part}"
+
+    def generate_category_id(self) -> str:
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        random_part = secrets.token_hex(2).upper()
+
+        return f"CAT-{timestamp}-{random_part}"
 
     def generate_random_id(self) -> str:
         

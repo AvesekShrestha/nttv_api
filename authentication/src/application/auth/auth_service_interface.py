@@ -26,5 +26,8 @@ class IAuthService(ABC):
     async def logout(self, refresh_token: str) -> None : pass
 
     @abstractmethod
+    async def refresh(self, refresh_token: str) -> str : pass
+
+    @abstractmethod
     async def bootstrap(self) -> UserResponseDTO: pass
 

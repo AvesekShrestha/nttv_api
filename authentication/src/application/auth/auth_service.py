@@ -5,11 +5,14 @@ from graphql import Token
 
 from src.application.dto.login_dto import LoginDTO
 from src.application.dto.login_response_dto import LoginResponseDTO
+from src.application.exceptions.already_logged_in_exception import AlreadyLoggedIn
+from src.application.exceptions.authentication_exception import AuthenticationRequired
 from src.application.exceptions.password_exception import InvalidPassword
 from src.application.shared.datetime_provider_interface import IDateTimeProvider
 from src.application.shared.jwt_payload import JWTPayload
 from src.application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
 from src.config import settings
+from src.domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
 from src.domain.token.token_aggregate import TokenAggregrate
 from src.domain.users.user_role import UserRole
 from src.application.auth.auth_service_interface import IAuthService
@@ -81,6 +84,9 @@ class AuthService(IAuthService):
         if user is None:
             raise UserNotFound("Invalid email or password")
 
+        already_logged_in = await self._token_repository.has_active_token(user_id=user.id)
+        if already_logged_in: raise AlreadyLoggedIn("Already logged in. first logout")
+
         if not await self._hasher.verify(
             payload.password,
             user.password,
@@ -115,10 +121,7 @@ class AuthService(IAuthService):
     async def logout(self, refresh_token : str) -> None:
         
         token_id, secret = refresh_token.split(".", 1)
-        print(token_id)
         token : TokenAggregrate | None = await self._token_repository.get_by_id(token_id=token_id)
-
-        print(token)
 
         if token is None:
             return
@@ -133,6 +136,38 @@ class AuthService(IAuthService):
         await self._token_repository.update(token)
 
         return None
+
+    async def refresh(self, refresh_token: str) -> str : 
+
+        token_id, secret = refresh_token.split(".", 1)
+        token : TokenAggregrate | None = await self._token_repository.get_by_id(token_id=token_id)
+
+        if token is None:
+            raise AuthenticationRequired("Authentication required")
+
+        valid_token = await self._hasher.verify(refresh_token, token.token_hash)
+
+        if not valid_token:
+            raise AuthenticationRequired("Invalid refresh token")
+
+        if token.is_revoked:
+            raise AuthenticationRequired("Invalid refresh token/ token has already been revoked")
+
+        if token.is_expired:
+            raise ExpiredRefreshToken("Refresh token has expired")
+
+        user : UserAggregrate | None = await self._user_repository.get_by_id(user_id=token.user_id)
+        if not user : raise AuthenticationRequired("Invalid refresh token")
+
+        now = self._datetime_provider.now()
+        jwt_payload : JWTPayload = JWTPayload(
+            sub=user.id,
+            role=user.role,
+            iat=now,
+            exp=now + timedelta(minutes=settings.JWT_ACCESS_EXPIRE_MINUTES)
+        )
+        access_token = await self._jwt_generator.generate(jwt_payload)
+        return access_token
  
     async def bootstrap(self) -> UserResponseDTO:
 

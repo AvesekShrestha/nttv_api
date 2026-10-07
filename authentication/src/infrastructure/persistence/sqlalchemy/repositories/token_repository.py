@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infrastructure.persistence.sqlalchemy.mappers.token_infrastructure_mapper import TokenMapper
@@ -45,3 +45,12 @@ class TokenRepository(ITokenRepository):
         await self.session.commit()
 
 
+    async def has_active_token(self, user_id: str) -> bool:
+        stmt = select(
+            exists().where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked_at.is_(None)
+            )
+)
+        result = await self.session.execute(stmt)
+        return bool(result.scalar())

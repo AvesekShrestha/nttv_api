@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from src.domain.shared.aggregrate import AggregrateRoot
-from src.domain.exceptions.refresh_token_expired_exception import RefreshTokenExpired
+from src.domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
 
 @dataclass
 class TokenAggregrate(AggregrateRoot[str]):
@@ -54,12 +54,12 @@ class TokenAggregrate(AggregrateRoot[str]):
     def revoke(self) -> None:
 
         if self.is_revoked:
-            raise RefreshTokenExpired(
+            raise ExpiredRefreshToken(
                 "Refresh token has already been revoked"
             )
 
         if self.is_expired:
-            raise RefreshTokenExpired(
+            raise ExpiredRefreshToken(
                 "Refresh token has expired"
             )
 

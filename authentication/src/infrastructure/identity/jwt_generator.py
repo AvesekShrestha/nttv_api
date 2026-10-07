@@ -31,6 +31,12 @@ class JWTGenerator(IJWTGenerator):
             ) from exc
 
         except jwt.InvalidTokenError as exc:
+            print(
+                "JWT ERROR:",
+                type(exc).__name__,
+                repr(str(exc)),
+            )
+
             raise InvalidAccessToken(
                 "Invalid access token"
             ) from exc

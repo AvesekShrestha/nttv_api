@@ -12,3 +12,6 @@ class ITokenRepository(ABC):
 
     @abstractmethod
     async def update(self, aggregate : TokenAggregrate) -> None: pass
+
+    @abstractmethod
+    async def has_active_token(self, user_id: str) -> bool: pass

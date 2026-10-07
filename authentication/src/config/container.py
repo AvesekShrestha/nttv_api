@@ -1,17 +1,20 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from dependency_injector import containers, providers
 
+
+from src.application.auth.auth_service import AuthService
+from src.application.category.category_service import CategoryService
+from src.application.team.team_service import TeamService
+
 from src.infrastructure.identity.hasher import Hasher
 from src.infrastructure.identity.id_generator import IdGenerator
 from src.infrastructure.identity.datetime_provider import DateTimeProvider
 from src.infrastructure.identity.jwt_generator import JWTGenerator
-
-from src.application.auth.auth_service import AuthService
-
+from src.infrastructure.identity.refresh_token_generator import RefreshTokenGenerator
 from src.infrastructure.persistence.sqlalchemy.repositories.token_repository import TokenRepository
 from src.infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
-from src.infrastructure.identity.refresh_token_generator import RefreshTokenGenerator
-
+from src.infrastructure.persistence.sqlalchemy.repositories.category_repository import CategoryRepository
+from src.infrastructure.persistence.sqlalchemy.repositories.team_repository import TeamRepository
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -34,6 +37,16 @@ class Container(containers.DeclarativeContainer):
         session=session
     )
 
+    category_repository = providers.Factory(
+        CategoryRepository,
+        session=session
+    )
+
+    team_repository = providers.Factory(
+        TeamRepository,
+        session=session
+    )
+
     auth_service = providers.Factory(
         AuthService,
         user_repository=user_repository,
@@ -44,6 +57,19 @@ class Container(containers.DeclarativeContainer):
         refresh_token_generator=refresh_token_generator,
         datetime_provider=datetime_provider
     )
+
+    category_service = providers.Factory(
+        CategoryService,
+        category_repository=category_repository,
+        id_generator=id_genertor
+    )
+
+    team_service = providers.Factory(
+        TeamService,
+        team_repository=team_repository,
+        id_generator=id_genertor
+    )
+
 
 
 container = Container()

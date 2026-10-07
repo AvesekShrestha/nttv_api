@@ -10,6 +10,9 @@ from src.config import settings
 from src.infrastructure.persistence.sqlalchemy.database import Base
 from src.infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
 from src.infrastructure.persistence.sqlalchemy.models.user_model import User
+from src.infrastructure.persistence.sqlalchemy.models.team_model import Team
+from src.infrastructure.persistence.sqlalchemy.models.team_member_model import TeamMember
+from src.infrastructure.persistence.sqlalchemy.models.category_model import Category
 
 
 # this is the Alembic Config object, which provides

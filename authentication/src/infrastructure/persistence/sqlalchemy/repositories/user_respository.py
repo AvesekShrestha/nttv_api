@@ -1,6 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import false, select, delete, update
-from sqlalchemy.orm import session
+from sqlalchemy import select, delete
 
 from src.domain.users.user_role import UserRole
 from src.application.interfaces.user_repository_interface import IUserRepository
@@ -84,3 +83,4 @@ class UserRepository(IUserRepository):
 
         stmt = delete(User).where(User.id == user_id)
         await self.session.execute(stmt)
+        await self.session.commit()
