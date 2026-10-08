@@ -30,7 +30,7 @@ class TeamRepository(ITeamRepository):
         if team is None:
             return None
 
-        return TeamMapper.to_domain(team)
+        return TeamMapper.to_domain_with_members(team)
 
     async def get_all(
         self,
@@ -46,7 +46,7 @@ class TeamRepository(ITeamRepository):
         teams = result.scalars().all()
 
         return [
-            TeamMapper.to_domain(team)
+            TeamMapper.to_domain_with_members(team)
             for team in teams
         ]
 
@@ -59,9 +59,7 @@ class TeamRepository(ITeamRepository):
 
         self.session.add(team)
 
-        await self.session.commit()
-
-        await self.session.refresh(team)
+        await self.session.flush()
 
         return TeamMapper.to_domain(team)
 
@@ -73,9 +71,9 @@ class TeamRepository(ITeamRepository):
         team = TeamMapper.to_model(aggregate)
         updated_team = await self.session.merge(team)
 
-        await self.session.commit()
+        await self.session.flush()
 
-        return TeamMapper.to_domain(updated_team)
+        return TeamMapper.to_domain_with_members(updated_team)
 
     async def delete(
         self,
@@ -88,4 +86,4 @@ class TeamRepository(ITeamRepository):
 
         await self.session.execute(stmt)
 
-        await self.session.commit()
+        await self.session.flush()

@@ -3,6 +3,8 @@ from src.application.exceptions.category_exception import CategoryDoesNotExists
 from src.application.interfaces.category_repository_interface import ICategoryRepository
 from src.application.category.category_service_interface import ICategoryService
 
+from src.application.shared.id_generator_interface import IIdGenerator
+from src.application.shared.unit_of_work_interface import IUnitOfWork
 from src.domain.category.category_aggregrate import CategoryAggregrate
 
 
@@ -11,10 +13,13 @@ class CategoryService(ICategoryService):
     def __init__(
         self,
         category_repository: ICategoryRepository,
-        id_generator,
+        id_generator : IIdGenerator,
+        unit_of_work : IUnitOfWork
+
     ):
         self.category_repository = category_repository
         self.id_generator = id_generator
+        self.unit_of_work = unit_of_work
 
     async def get_by_id(
         self,
@@ -55,6 +60,7 @@ class CategoryService(ICategoryService):
             aggregate=category,
         )
 
+        await self.unit_of_work.commit()
         return self._to_response(category)
 
     async def update(
@@ -68,24 +74,28 @@ class CategoryService(ICategoryService):
         )
 
         if category is None:
-            # Replace with your own CategoryNotFound exception.
-            raise ValueError("Category not found")
+            raise CategoryDoesNotExists(f"Category with id {category_id} doesnot exists")
 
-        category.change_name(payload.name)
-        category.change_description(payload.description)
+        if payload.name:
+            category.change_name(payload.name)
+
+
+        if payload.description:
+            category.change_description(payload.description)
 
         category = await self.category_repository.update(
             aggregate=category,
         )
 
+        await self.unit_of_work.commit()
         return self._to_response(category)
 
     async def delete(
         self,
         category_id: str,
-    ) -> None:
+    ) -> bool:
 
-        category = await self.category_repository.get_by_id(
+        category : CategoryAggregrate | None = await self.category_repository.get_by_id(
             category_id=category_id,
         )
 
@@ -95,6 +105,9 @@ class CategoryService(ICategoryService):
         await self.category_repository.delete(
             category_id=category_id,
         )
+        await self.unit_of_work.commit()
+
+        return True
 
     @staticmethod
     def _to_response(

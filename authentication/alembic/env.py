@@ -13,7 +13,7 @@ from src.infrastructure.persistence.sqlalchemy.models.user_model import User
 from src.infrastructure.persistence.sqlalchemy.models.team_model import Team
 from src.infrastructure.persistence.sqlalchemy.models.team_member_model import TeamMember
 from src.infrastructure.persistence.sqlalchemy.models.category_model import Category
-
+from src.infrastructure.persistence.sqlalchemy.models.outbox_event_model import OutboxEventModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

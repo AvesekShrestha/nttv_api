@@ -22,14 +22,25 @@ class TeamCreateDTO:
 
 @dataclass
 class TeamUpdateDTO:
-    name: str
-    description: str
-    category_id: str
-    level: Level
+    name: str | None
+    description: str | None
+    category_id: str | None
+    level: Level | None
 
 
 @dataclass
 class TeamResponseDTO:
+    id: str
+    name: str
+    description: str
+    level: Level
+    category_id: str
+    is_active: bool
+    created_at: datetime | None
+    updated_at: datetime | None
+
+@dataclass
+class TeamDetailResponseDTO:
     id: str
     name: str
     description: str

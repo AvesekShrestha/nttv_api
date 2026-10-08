@@ -36,5 +36,5 @@ class ICategoryService(ABC):
     async def delete(
         self,
         category_id: str,
-    ) -> None:
+    ) -> bool:
         pass

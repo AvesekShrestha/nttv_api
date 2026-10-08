@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.functions import user
 
 from src.api.rest_api.dependencies.authentication import get_current_user
 from src.api.rest_api.dependencies.authorization import require_roles
@@ -11,7 +12,7 @@ from src.application.dto.register_dto import RegisterDTO
 from src.application.auth.auth_service import AuthService 
 from src.application.auth.auth_service_interface import IAuthService
 from src.application.dto.register_dto import RegisterDTO
-from src.application.dto.login_response_dto import LoginResponseDTO
+from src.application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
 from src.infrastructure.persistence.sqlalchemy.database import get_session
 from src.infrastructure.persistence.sqlalchemy.repositories import user_respository
 from src.infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
@@ -37,7 +38,7 @@ async def login(payload : LoginDTO, response: Response, session : AsyncSession =
     container.session.override(session)
     auth_service = container.auth_service()
 
-    result : LoginResponseDTO = await auth_service.login(payload=payload)
+    result : LoginResultDTO = await auth_service.login(payload=payload)
 
     response.set_cookie(
         key="refresh_token",
@@ -48,8 +49,10 @@ async def login(payload : LoginDTO, response: Response, session : AsyncSession =
         max_age=60 * 60 * 24 * settings.REFRESH_EXPIRE_DAYS,
         path="/api/auth",
     )
-    return result
-
+    return LoginResponseDTO(
+        user=result.user,
+        access_token=result.access_token
+    )
 
 @router.post("/auth/logout", response_model=bool)
 async def logout(request : Request, response : Response, session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)):

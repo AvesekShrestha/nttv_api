@@ -18,4 +18,7 @@ class IIdGenerator(ABC):
     def generate_category_id(self) -> str: pass
 
     @abstractmethod
+    def generate_event_id(self) -> str: pass
+
+    @abstractmethod
     def generate_random_id(self) -> str: pass

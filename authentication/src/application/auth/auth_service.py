@@ -4,15 +4,19 @@ from os.path import exists
 from graphql import Token
 
 from src.application.dto.login_dto import LoginDTO
-from src.application.dto.login_response_dto import LoginResponseDTO
+from src.application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
+from src.application.dto.token_dto import AccessTokenResponseDTO
 from src.application.exceptions.already_logged_in_exception import AlreadyLoggedIn
 from src.application.exceptions.authentication_exception import AuthenticationRequired
 from src.application.exceptions.password_exception import InvalidPassword
+from src.application.interfaces.outbox_repository_interface import IOutboxRepository
 from src.application.shared.datetime_provider_interface import IDateTimeProvider
 from src.application.shared.jwt_payload import JWTPayload
 from src.application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
+from src.application.shared.unit_of_work_interface import IUnitOfWork
 from src.config import settings
 from src.domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
+from src.domain.outbox.entity.outbox_event import OutboxEvent
 from src.domain.token.token_aggregate import TokenAggregrate
 from src.domain.users.user_role import UserRole
 from src.application.auth.auth_service_interface import IAuthService
@@ -32,19 +36,23 @@ class AuthService(IAuthService):
         self,
         user_repository: IUserRepository,
         token_repository: ITokenRepository,
+        outbox_repository: IOutboxRepository,
         hasher: IHasher,
         id_generator: IIdGenerator,
         jwt_generator: IJWTGenerator,
         refresh_token_generator: IRefreshTokenGenerator,
         datetime_provider: IDateTimeProvider,
+        unit_of_work: IUnitOfWork
     ):
         self._user_repository = user_repository
         self._token_repository = token_repository
+        self._outbox_repository = outbox_repository
         self._hasher = hasher
         self._id_generator = id_generator
         self._jwt_generator = jwt_generator
         self._refresh_token_generator = refresh_token_generator
         self._datetime_provider = datetime_provider
+        self._unit_of_work = unit_of_work
 
     async def register(
         self,
@@ -70,12 +78,26 @@ class AuthService(IAuthService):
         )
 
         result : UserAggregrate = await self._user_repository.add(user)
+
+        event = OutboxEvent.create(
+            event_id=self._id_generator.generate_event_id(),
+            event_type="user.created",
+            occurred_at=self._datetime_provider.now(),
+            data={
+                "username" : user.username,
+                "email" : user.email
+            }
+        )
+
+        await self._outbox_repository.add(event)
+
+        await self._unit_of_work.commit()
         return UserMapper.to_response(result)
 
     async def login(
         self,
         payload: LoginDTO,
-    ) -> LoginResponseDTO:
+    ) -> LoginResultDTO:
 
         user = await self._user_repository.get_by_email(
             payload.email
@@ -116,28 +138,30 @@ class AuthService(IAuthService):
         )
         await self._token_repository.add(refresh_token_aggregate)
 
+        await self._unit_of_work.commit()
         return AuthMapper.login_response(user, access_token=access_token, refresh_token=refresh_token)
 
-    async def logout(self, refresh_token : str) -> None:
+    async def logout(self, refresh_token : str) -> bool:
         
         token_id, secret = refresh_token.split(".", 1)
         token : TokenAggregrate | None = await self._token_repository.get_by_id(token_id=token_id)
 
         if token is None:
-            return
+            raise AuthenticationRequired("authentication required")
 
         valid_token = await self._hasher.verify(refresh_token, token.token_hash)
 
-        if not valid_token: return
-        if token.is_revoked: return
+        if not valid_token: raise AuthenticationRequired("Invalid refresh token")
+        if token.is_revoked: raise AuthenticationRequired("Refresh token already revoked")
 
         token.revoke()
 
         await self._token_repository.update(token)
+        await self._unit_of_work.commit()
 
-        return None
+        return True
 
-    async def refresh(self, refresh_token: str) -> str : 
+    async def refresh(self, refresh_token: str) -> AccessTokenResponseDTO : 
 
         token_id, secret = refresh_token.split(".", 1)
         token : TokenAggregrate | None = await self._token_repository.get_by_id(token_id=token_id)
@@ -167,22 +191,4 @@ class AuthService(IAuthService):
             exp=now + timedelta(minutes=settings.JWT_ACCESS_EXPIRE_MINUTES)
         )
         access_token = await self._jwt_generator.generate(jwt_payload)
-        return access_token
- 
-    async def bootstrap(self) -> UserResponseDTO:
-
-        user = await self._user_repository.get_by_email(email="avesekxthaa@gmail.com")
-        if user: raise UserAlreadyExists("Admin with this email address already exists")
-
-        user_aggregate : UserAggregrate = UserAggregrate.create(
-            id=self._id_generator.generate_user_id(),
-            username="avesek",
-            email="avesekxthaa@gmail.com",
-            password= await self._hasher.hash("avesek1234"),
-            role=UserRole.ADMIN
-        )
-
-        result : UserAggregrate = await self._user_repository.add(user_aggregate)
-
-        return UserMapper.to_response(result)
-
+        return AccessTokenResponseDTO(access_token=access_token)

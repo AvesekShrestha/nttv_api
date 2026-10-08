@@ -64,7 +64,7 @@ class UserRepository(IUserRepository):
 
         user = UserMapper.to_model(aggregate)
         self.session.add(user)
-        await self.session.commit()
+        await self.session.flush()
 
         return UserMapper.to_domain(user)
     
@@ -72,7 +72,7 @@ class UserRepository(IUserRepository):
 
         user = UserMapper.to_model(aggregate=aggregate)
         updated_user = await self.session.merge(user)
-        await self.session.commit()
+        await self.session.flush()
 
         return UserMapper.to_domain(updated_user)
 
@@ -83,4 +83,4 @@ class UserRepository(IUserRepository):
 
         stmt = delete(User).where(User.id == user_id)
         await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()

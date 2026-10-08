@@ -10,8 +10,8 @@ class CategoryCreateDTO:
 
 @dataclass
 class CategoryUpdateDTO:
-    name: str
-    description: str
+    name: str | None
+    description: str | None
 
 
 @dataclass

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from src.application.exceptions.team_exception import TeamMemberAlreadyExists
 from src.domain.shared.aggregrate import AggregrateRoot
 from src.domain.shared.level import Level
 from src.domain.team.entity.team_member_entity import TeamMember
@@ -84,16 +85,17 @@ class TeamAggregate(AggregrateRoot[str]):
         self._is_active = activation
 
     def add_member(self, member: TeamMember) -> None:
-        if any(existing.id == member.id for existing in self._members):
-            return
-
+        if any(existing.user_id == member.user_id for existing in self._members):
+            raise TeamMemberAlreadyExists(
+                f"User {member.user_id} is already a member of this team"
+            )
         self._members.append(member)
 
     def remove_member(self, member_id: str) -> None:
         self._members = [
             member
             for member in self._members
-            if member.id != member_id
+            if member.user_id != member_id
         ]
 
     def activate_member(self, member_id: str) -> None:

@@ -46,6 +46,22 @@ class TeamMapper:
             _level=Level.from_string(model.level),
             _is_active=model.is_active,
             _category_id=model.category_id,
+            _created_at=model.created_at,
+            _updated_at=model.updated_at,
+        )
+
+    @staticmethod
+    def to_domain_with_members(
+        model: Team,
+    ) -> TeamAggregate:
+
+        return TeamAggregate(
+            _id=model.id,
+            _name=model.name,
+            _description=model.description,
+            _level=Level.from_string(model.level),
+            _is_active=model.is_active,
+            _category_id=model.category_id,
             _members=[
                 TeamMapper.member_to_domain(member)
                 for member in model.members

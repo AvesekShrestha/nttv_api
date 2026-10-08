@@ -51,7 +51,7 @@ async def update(category_id : str, payload : CategoryUpdateDTO, session : Async
     result = await category_service.update(category_id=category_id, payload=payload)
     return result
 
-@router.delete("/category/{category_id}")
+@router.delete("/category/{category_id}", response_model=bool)
 async def delete(category_id : str, session : AsyncSession = Depends(get_session), _ = Depends(require_roles("admin"))):
 
     container.session.override(session)

@@ -33,7 +33,7 @@ class TokenRepository(ITokenRepository):
 
         refresh_token : RefreshToken = TokenMapper.to_model(aggregrate)
         self.session.add(refresh_token)
-        await self.session.commit()
+        await self.session.flush()
 
         return TokenMapper.to_domain(refresh_token)
 
@@ -42,14 +42,14 @@ class TokenRepository(ITokenRepository):
         token = TokenMapper.to_model(aggregate)
         updated_token = await self.session.merge(token)
 
-        await self.session.commit()
+        await self.session.flush()
 
 
     async def has_active_token(self, user_id: str) -> bool:
         stmt = select(
             exists().where(
-            RefreshToken.user_id == user_id,
-            RefreshToken.revoked_at.is_(None)
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
             )
 )
         result = await self.session.execute(stmt)

@@ -50,7 +50,7 @@ class CategoryRepository(ICategoryRepository):
         category = CategoryMapper.to_model(aggregate)
 
         self.session.add(category)
-        await self.session.commit()
+        await self.session.flush()
 
         return CategoryMapper.to_domain(category)
 
@@ -62,7 +62,7 @@ class CategoryRepository(ICategoryRepository):
         category = CategoryMapper.to_model(aggregate)
 
         updated_category = await self.session.merge(category)
-        await self.session.commit()
+        await self.session.flush()
 
         return CategoryMapper.to_domain(updated_category)
 
@@ -74,4 +74,4 @@ class CategoryRepository(ICategoryRepository):
         stmt = delete(Category).where(Category.id == category_id)
 
         await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()

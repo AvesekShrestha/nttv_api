@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.application.dto.team_dto import AddTeamMemberDTO, RemoveTeamMember, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO
+from src.application.dto.team_dto import AddTeamMemberDTO, RemoveTeamMember, TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO
 
 
 class ITeamService(ABC):
@@ -9,13 +9,13 @@ class ITeamService(ABC):
     async def get_by_id(
         self,
         team_id: str,
-    ) -> TeamResponseDTO | None:
+    ) -> TeamDetailResponseDTO | None:
         pass
 
     @abstractmethod
     async def get_all(
         self,
-    ) -> list[TeamResponseDTO]:
+    ) -> list[TeamDetailResponseDTO]:
         pass
 
     @abstractmethod
@@ -30,19 +30,19 @@ class ITeamService(ABC):
         self,
         team_id: str,
         payload: TeamUpdateDTO,
-    ) -> TeamResponseDTO:
+    ) -> TeamDetailResponseDTO:
         pass
 
     @abstractmethod
     async def delete(
         self,
         team_id: str,
-    ) -> None:
+    ) -> bool:
         pass
 
     @abstractmethod
-    async def add_team_member(self, team_id : str, user_id: str) -> TeamResponseDTO: pass
+    async def add_team_member(self, team_id : str, user_id: str) -> TeamDetailResponseDTO: pass
 
     @abstractmethod
-    async def remove_team_member(self, team_id : str, user_id : str) -> TeamResponseDTO: pass
+    async def remove_team_member(self, team_id : str, user_id : str) -> TeamDetailResponseDTO: pass
 
