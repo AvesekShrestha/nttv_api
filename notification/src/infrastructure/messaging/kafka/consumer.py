@@ -6,6 +6,7 @@ from confluent_kafka import Consumer, KafkaError
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
+from src.application.delivery.delivery_service import DeliveryService
 from src.application.dto.create_notification_dto import CreateNotificationRequest
 from src.application.notification.create_notification import CreateNotification
 from src.domain.notification.notification_channel import NotificationChannel
@@ -15,6 +16,9 @@ from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
 from src.infrastructure.persistence.sqlalchemy.repositories.notification_repository import (
     SQLAlchemyNotificationRepository,
 )
+from src.infrastructure.providers.smtp.smtp_email_sender import SmtpEmailSender
+
+from src.config.settings import settings
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -30,12 +34,24 @@ def create_consumer() -> Consumer:
         }
     )
 
+
 async def process_ticket_event(event: TicketEvent) -> None:
     async with SessionLocal() as session:
         try:
             repository = SQLAlchemyNotificationRepository(session)
             id_generator = IdGenerator()
-            use_case = CreateNotification(repository, id_generator)
+            email_sender = SmtpEmailSender(settings=settings)
+
+            delivery_service = DeliveryService(
+                repository=repository,
+                email_sender=email_sender,
+            )
+
+            use_case = CreateNotification(
+                repository=repository,
+                id_generator=id_generator,
+                delivery_service=delivery_service,
+            )
 
             for recipient in event.recipients:
                 dto = CreateNotificationRequest(
@@ -58,13 +74,14 @@ async def process_ticket_event(event: TicketEvent) -> None:
 
                 if notification is None:
                     logger.info(
-                        "Skipping duplicate notification event_id=%s recipient=%s",
+                        "Skipping duplicate notification "
+                        "event_id=%s recipient=%s",
                         event.event_id,
                         recipient.email,
                     )
                 else:
                     logger.info(
-                        "Created notification id=%s event_id=%s recipient=%s",
+                        "Processed notification id=%s event_id=%s recipient=%s",
                         notification.id,
                         event.event_id,
                         recipient.email,
@@ -72,10 +89,11 @@ async def process_ticket_event(event: TicketEvent) -> None:
 
         except Exception:
             logger.exception(
-                "Database/session failure for event_id=%s",
+                "Failed to process ticket event_id=%s",
                 event.event_id,
             )
             raise
+
         finally:
             if session.in_transaction():
                 await session.rollback()
@@ -96,6 +114,7 @@ async def consume_ticket_events() -> None:
                 continue
 
             error = message.error()
+
             if error is not None:
                 if error.code() == KafkaError._PARTITION_EOF:
                     continue
@@ -104,18 +123,23 @@ async def consume_ticket_events() -> None:
                 continue
 
             value = message.value()
+
             if value is None:
                 logger.error("Received Kafka message with no value")
                 continue
 
             try:
                 event = TicketEvent.model_validate_json(value)
+
             except (ValidationError, ValueError):
-                logger.exception("Invalid ticket event; offset not committed")
+                logger.exception(
+                    "Invalid ticket event; offset not committed"
+                )
                 continue
 
             try:
                 await process_ticket_event(event)
+
             except Exception:
                 logger.exception(
                     "Failed to process event_id=%s; offset not committed",
@@ -128,6 +152,7 @@ async def consume_ticket_events() -> None:
                 message=message,
                 asynchronous=False,
             )
+
             logger.info(
                 "Committed event_id=%s topic=%s partition=%s offset=%s",
                 event.event_id,
