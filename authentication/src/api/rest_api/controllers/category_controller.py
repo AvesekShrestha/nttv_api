@@ -3,14 +3,14 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.rest_api.dependencies.authentication import get_current_user
+from api.rest_api.dependencies.authentication import get_current_user
 
-from src.api.rest_api.dependencies.authorization import require_roles
-from src.application.dto.category_dto import CategoryResponseDTO, CategoryCreateDTO, CategoryUpdateDTO
+from api.rest_api.dependencies.authorization import require_roles
+from application.dto.category_dto import CategoryResponseDTO, CategoryCreateDTO, CategoryUpdateDTO
 
-from src.infrastructure.persistence.sqlalchemy.database import get_session
+from infrastructure.persistence.sqlalchemy.database import get_session
 
-from src.config.container import  container
+from config.container import  container
 
 router = APIRouter()
 

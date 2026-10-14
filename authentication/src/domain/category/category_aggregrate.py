@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.domain.shared.aggregrate import AggregrateRoot
+from domain.shared.aggregrate import AggregrateRoot
 
 @dataclass
 class CategoryAggregrate(AggregrateRoot[str]):

@@ -1,11 +1,11 @@
-from src.application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
-from src.application.exceptions.category_exception import CategoryDoesNotExists
-from src.application.interfaces.category_repository_interface import ICategoryRepository
-from src.application.category.category_service_interface import ICategoryService
+from application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
+from application.exceptions.category_exception import CategoryDoesNotExists
+from application.interfaces.category_repository_interface import ICategoryRepository
+from application.category.category_service_interface import ICategoryService
 
-from src.application.shared.id_generator_interface import IIdGenerator
-from src.application.shared.unit_of_work_interface import IUnitOfWork
-from src.domain.category.category_aggregrate import CategoryAggregrate
+from application.shared.id_generator_interface import IIdGenerator
+from application.shared.unit_of_work_interface import IUnitOfWork
+from domain.category.category_aggregrate import CategoryAggregrate
 
 
 class CategoryService(ICategoryService):

@@ -1,17 +1,17 @@
-from src.application.exceptions.category_exception import CategoryDoesNotExists
-from src.application.exceptions.team_exception import TeamNotFound
-from src.application.exceptions.user_exception import UserNotFound
-from src.application.interfaces.category_repository_interface import ICategoryRepository
-from src.application.interfaces.team_repository_interface import ITeamRepository
+from application.exceptions.category_exception import CategoryDoesNotExists
+from application.exceptions.team_exception import TeamNotFound
+from application.exceptions.user_exception import UserNotFound
+from application.interfaces.category_repository_interface import ICategoryRepository
+from application.interfaces.team_repository_interface import ITeamRepository
 
-from src.application.dto.team_dto import TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO, TeamMemberResponseDTO
-from src.application.interfaces.user_repository_interface import IUserRepository
-from src.application.shared.id_generator_interface import IIdGenerator
-from src.application.shared.unit_of_work_interface import IUnitOfWork
-from src.application.team.team_service_interface import ITeamService
+from application.dto.team_dto import TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO, TeamMemberResponseDTO
+from application.interfaces.user_repository_interface import IUserRepository
+from application.shared.id_generator_interface import IIdGenerator
+from application.shared.unit_of_work_interface import IUnitOfWork
+from application.team.team_service_interface import ITeamService
 
-from src.domain.team.entity.team_member_entity import TeamMember
-from src.domain.team.team_aggregate import TeamAggregate
+from domain.team.entity.team_member_entity import TeamMember
+from domain.team.team_aggregate import TeamAggregate
 
 
 class TeamService(ITeamService):

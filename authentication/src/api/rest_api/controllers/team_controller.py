@@ -4,12 +4,12 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.rest_api.dependencies.authentication import get_current_user
-from src.api.rest_api.dependencies.authorization import require_roles
-from src.application.dto.team_dto import AddTeamMemberDTO, TeamCreateDTO, TeamDetailResponseDTO, TeamResponseDTO, TeamUpdateDTO
-from src.infrastructure.persistence.sqlalchemy.database import get_session
+from api.rest_api.dependencies.authentication import get_current_user
+from api.rest_api.dependencies.authorization import require_roles
+from application.dto.team_dto import AddTeamMemberDTO, TeamCreateDTO, TeamDetailResponseDTO, TeamResponseDTO, TeamUpdateDTO
+from infrastructure.persistence.sqlalchemy.database import get_session
 
-from src.config.container import container
+from config.container import container
 
 router = APIRouter()
 

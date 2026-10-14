@@ -1,13 +1,13 @@
 from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.persistence.sqlalchemy.mappers.token_infrastructure_mapper import TokenMapper
-from src.application.interfaces.token_repository_interface import ITokenRepository
+from infrastructure.persistence.sqlalchemy.mappers.token_infrastructure_mapper import TokenMapper
+from application.interfaces.token_repository_interface import ITokenRepository
 
-from src.domain.token.token_aggregate import TokenAggregrate
+from domain.token.token_aggregate import TokenAggregrate
 
-from src.infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
-from src.infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
+from infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
+from infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
 
 
 

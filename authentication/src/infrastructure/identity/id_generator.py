@@ -1,7 +1,7 @@
 from datetime import datetime
 import secrets
 
-from src.application.shared.id_generator_interface import IIdGenerator
+from application.shared.id_generator_interface import IIdGenerator
 
 
 class IdGenerator(IIdGenerator):

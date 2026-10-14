@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from src.domain.shared.aggregrate import AggregrateRoot
-from src.domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
+from domain.shared.aggregrate import AggregrateRoot
+from domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
 
 @dataclass
 class TokenAggregrate(AggregrateRoot[str]):

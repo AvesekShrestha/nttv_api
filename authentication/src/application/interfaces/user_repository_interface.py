@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.users.user_aggregrate import UserAggregrate
+from domain.users.user_aggregrate import UserAggregrate
 
 class IUserRepository:
 

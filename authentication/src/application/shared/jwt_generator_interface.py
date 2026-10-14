@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.application.shared.jwt_payload import JWTPayload
+from application.shared.jwt_payload import JWTPayload
 
 class IJWTGenerator(ABC):
     

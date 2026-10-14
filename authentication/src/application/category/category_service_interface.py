@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
+from application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
 
 class ICategoryService(ABC):
 

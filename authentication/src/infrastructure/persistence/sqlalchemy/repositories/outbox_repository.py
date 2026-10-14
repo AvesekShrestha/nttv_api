@@ -3,10 +3,10 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.outbox.entity.outbox_event import OutboxEvent
-from src.application.interfaces.outbox_repository_interface import IOutboxRepository
-from src.infrastructure.persistence.sqlalchemy.mappers.outbox_mappers import OutboxEventMapper
-from src.infrastructure.persistence.sqlalchemy.models.outbox_event_model import OutboxEventModel
+from domain.outbox.entity.outbox_event import OutboxEvent
+from application.interfaces.outbox_repository_interface import IOutboxRepository
+from infrastructure.persistence.sqlalchemy.mappers.outbox_mappers import OutboxEventMapper
+from infrastructure.persistence.sqlalchemy.models.outbox_event_model import OutboxEventModel
 
 class OutboxRepository(IOutboxRepository):
 
@@ -43,6 +43,9 @@ class OutboxRepository(IOutboxRepository):
 
     async def update(self, event: OutboxEvent) -> None:
 
+        print(f"Id from outbox repsoitory : {id(self.session)}")
         event_model = OutboxEventMapper.to_model(event)
+
+        print("Mapped published_at: %s", event_model.published_at)
         model = await self.session.merge(event_model)
         await self.session.flush()

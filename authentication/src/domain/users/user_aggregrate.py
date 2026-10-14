@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.domain.shared.aggregrate import AggregrateRoot
-from src.domain.shared.level import Level
-from src.domain.users.user_role import UserRole
+from domain.shared.aggregrate import AggregrateRoot
+from domain.shared.level import Level
+from domain.users.user_role import UserRole
 
 @dataclass
 class UserAggregrate(AggregrateRoot[str]):

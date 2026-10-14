@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from src.application.exceptions.team_exception import TeamMemberAlreadyExists
-from src.domain.shared.aggregrate import AggregrateRoot
-from src.domain.shared.level import Level
-from src.domain.team.entity.team_member_entity import TeamMember
+from application.exceptions.team_exception import TeamMemberAlreadyExists
+from domain.shared.aggregrate import AggregrateRoot
+from domain.shared.level import Level
+from domain.team.entity.team_member_entity import TeamMember
 
 
 @dataclass

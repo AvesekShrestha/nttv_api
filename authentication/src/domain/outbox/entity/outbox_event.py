@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from src.domain.shared.entity import Entity
+from domain.shared.entity import Entity
 
 @dataclass
 class OutboxEvent(Entity[str]):
 
+    _key : str
     _event_type: str
     _occurred_at: datetime
     _data: dict[str, Any]
@@ -15,6 +16,11 @@ class OutboxEvent(Entity[str]):
     @property
     def id(self) -> str:
         return self._id
+
+    @property
+    def key(self) -> str:
+        return self._key
+
 
     @property
     def event_type(self) -> str:
@@ -34,13 +40,15 @@ class OutboxEvent(Entity[str]):
 
     @staticmethod
     def create(
+        key : str,
         event_id: str,
         event_type: str,
         occurred_at: datetime,
         data: dict[str, Any],
-    ) -> "OutboxEvent":
+    ) -> OutboxEvent:
 
         return OutboxEvent(
+            _key=key,
             _id=event_id,
             _event_type=event_type,
             _occurred_at=occurred_at,

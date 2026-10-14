@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.application.dto.team_dto import AddTeamMemberDTO, RemoveTeamMember, TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO
+from application.dto.team_dto import AddTeamMemberDTO, RemoveTeamMember, TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO
 
 
 class ITeamService(ABC):

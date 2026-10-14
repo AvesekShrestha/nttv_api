@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.token.token_aggregate import TokenAggregrate
+from domain.token.token_aggregate import TokenAggregrate
 
 
 class ITokenRepository(ABC):

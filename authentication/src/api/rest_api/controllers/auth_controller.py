@@ -2,23 +2,23 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.functions import user
 
-from src.api.rest_api.dependencies.authentication import get_current_user
-from src.api.rest_api.dependencies.authorization import require_roles
-from src.application.dto.login_dto import LoginDTO
-from src.application.dto.user_response_dto import UserResponseDTO
-from src.application.exceptions.authentication_exception import AuthenticationRequired
+from api.rest_api.dependencies.authentication import get_current_user
+from api.rest_api.dependencies.authorization import require_roles
+from application.dto.login_dto import LoginDTO
+from application.dto.user_response_dto import UserResponseDTO
+from application.exceptions.authentication_exception import AuthenticationRequired
 
-from src.application.dto.register_dto import RegisterDTO
-from src.application.auth.auth_service import AuthService 
-from src.application.auth.auth_service_interface import IAuthService
-from src.application.dto.register_dto import RegisterDTO
-from src.application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
-from src.infrastructure.persistence.sqlalchemy.database import get_session
-from src.infrastructure.persistence.sqlalchemy.repositories import user_respository
-from src.infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
+from application.dto.register_dto import RegisterDTO
+from application.auth.auth_service import AuthService 
+from application.auth.auth_service_interface import IAuthService
+from application.dto.register_dto import RegisterDTO
+from application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
+from infrastructure.persistence.sqlalchemy.database import get_session
+from infrastructure.persistence.sqlalchemy.repositories import user_respository
+from infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
 
-from src.config import settings
-from src.config.container import container
+from config import settings
+from config.container import container
 
 
 router = APIRouter()
