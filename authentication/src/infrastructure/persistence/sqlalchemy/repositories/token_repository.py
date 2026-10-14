@@ -1,13 +1,13 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infrastructure.persistence.sqlalchemy.mappers.token_infrastructure_mapper import TokenMapper
-from src.application.interfaces.token_repository_interface import ITokenRepository
+from infrastructure.persistence.sqlalchemy.mappers.token_infrastructure_mapper import TokenMapper
+from application.interfaces.token_repository_interface import ITokenRepository
 
-from src.domain.token.token_aggregate import TokenAggregrate
+from domain.token.token_aggregate import TokenAggregrate
 
-from src.infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
-from src.infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
+from infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
+from infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
 
 
 
@@ -33,7 +33,7 @@ class TokenRepository(ITokenRepository):
 
         refresh_token : RefreshToken = TokenMapper.to_model(aggregrate)
         self.session.add(refresh_token)
-        await self.session.commit()
+        await self.session.flush()
 
         return TokenMapper.to_domain(refresh_token)
 
@@ -42,6 +42,15 @@ class TokenRepository(ITokenRepository):
         token = TokenMapper.to_model(aggregate)
         updated_token = await self.session.merge(token)
 
-        await self.session.commit()
+        await self.session.flush()
 
 
+    async def has_active_token(self, user_id: str) -> bool:
+        stmt = select(
+            exists().where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.revoked_at.is_(None),
+            )
+)
+        result = await self.session.execute(stmt)
+        return bool(result.scalar())

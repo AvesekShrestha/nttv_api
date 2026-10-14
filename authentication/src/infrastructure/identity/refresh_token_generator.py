@@ -1,5 +1,6 @@
 import secrets
-from src.application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
+
+from application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
 
 class RefreshTokenGenerator(IRefreshTokenGenerator):
 

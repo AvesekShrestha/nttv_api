@@ -1,7 +1,7 @@
-from src.domain.shared.level import Level
-from src.domain.users.user_aggregrate import UserAggregrate
-from src.domain.users.user_role import UserRole
-from src.infrastructure.persistence.sqlalchemy.models.user_model import User
+from domain.shared.level import Level
+from domain.users.user_aggregrate import UserAggregrate
+from domain.users.user_role import UserRole
+from infrastructure.persistence.sqlalchemy.models.user_model import User
 
 
 class UserMapper:

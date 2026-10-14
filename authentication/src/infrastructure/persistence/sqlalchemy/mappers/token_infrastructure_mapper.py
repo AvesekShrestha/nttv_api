@@ -1,5 +1,5 @@
-from src.domain.token.token_aggregate import TokenAggregrate
-from src.infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
+from domain.token.token_aggregate import TokenAggregrate
+from infrastructure.persistence.sqlalchemy.models.token_model import RefreshToken
 
 
 class TokenMapper:

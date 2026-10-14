@@ -1,6 +1,6 @@
 from argon2 import PasswordHasher as Argon2PasswordHasher
 
-from src.application.shared.hasher_interface import IHasher
+from application.shared.hasher_interface import IHasher
 
 
 class Hasher(IHasher):

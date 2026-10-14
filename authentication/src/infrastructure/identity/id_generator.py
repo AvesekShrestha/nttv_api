@@ -1,7 +1,7 @@
 from datetime import datetime
 import secrets
 
-from src.application.shared.id_generator_interface import IIdGenerator
+from application.shared.id_generator_interface import IIdGenerator
 
 
 class IdGenerator(IIdGenerator):
@@ -12,11 +12,11 @@ class IdGenerator(IIdGenerator):
 
         return f"USR-{timestamp}-{random_part}"
 
-    def generate_ticket_id(self) -> str:
+    def generate_team_member_id(self) -> str:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         random_part = secrets.token_hex(2).upper()
 
-        return f"TKT-{timestamp}-{random_part}"
+        return f"TM-{timestamp}-{random_part}"
 
     def generate_team_id(self) -> str:
 
@@ -32,6 +32,13 @@ class IdGenerator(IIdGenerator):
 
         return f"RFT-{timestamp}-{random_part}"
 
+    def generate_category_id(self) -> str:
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        random_part = secrets.token_hex(2).upper()
+
+        return f"CAT-{timestamp}-{random_part}"
+
     def generate_random_id(self) -> str:
         
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -39,3 +46,8 @@ class IdGenerator(IIdGenerator):
 
         return f"RND-{timestamp}-{random_part}"
 
+    def generate_event_id(self) -> str:
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        random_part = secrets.token_hex(2).upper()
+        return f"EVT-{timestamp}-{random_part}"

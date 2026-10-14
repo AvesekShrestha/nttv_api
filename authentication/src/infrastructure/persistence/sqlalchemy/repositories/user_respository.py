@@ -1,12 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import false, select, delete, update
-from sqlalchemy.orm import session
+from sqlalchemy import select, delete
 
-from src.domain.users.user_role import UserRole
-from src.application.interfaces.user_repository_interface import IUserRepository
-from src.infrastructure.persistence.sqlalchemy.models.user_model import User
-from src.infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
-from src.domain.users.user_aggregrate import UserAggregrate
+from domain.users.user_role import UserRole
+from application.interfaces.user_repository_interface import IUserRepository
+from infrastructure.persistence.sqlalchemy.models.user_model import User
+from infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
+from domain.users.user_aggregrate import UserAggregrate
 
 
 class UserRepository(IUserRepository):
@@ -65,7 +64,7 @@ class UserRepository(IUserRepository):
 
         user = UserMapper.to_model(aggregate)
         self.session.add(user)
-        await self.session.commit()
+        await self.session.flush()
 
         return UserMapper.to_domain(user)
     
@@ -73,7 +72,7 @@ class UserRepository(IUserRepository):
 
         user = UserMapper.to_model(aggregate=aggregate)
         updated_user = await self.session.merge(user)
-        await self.session.commit()
+        await self.session.flush()
 
         return UserMapper.to_domain(updated_user)
 
@@ -84,3 +83,4 @@ class UserRepository(IUserRepository):
 
         stmt = delete(User).where(User.id == user_id)
         await self.session.execute(stmt)
+        await self.session.flush()
