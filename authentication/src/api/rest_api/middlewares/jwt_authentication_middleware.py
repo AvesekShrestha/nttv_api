@@ -1,7 +1,7 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from src.infrastructure.identity.jwt_generator import JWTGenerator
+from infrastructure.identity.jwt_generator import JWTGenerator
 
 
 class JWTAuthenticationMiddleware(BaseHTTPMiddleware):

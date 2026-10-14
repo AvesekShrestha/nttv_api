@@ -1,5 +1,5 @@
-from src.domain.category.category_aggregrate import CategoryAggregrate
-from src.infrastructure.persistence.sqlalchemy.models.category_model import Category
+from domain.category.category_aggregrate import CategoryAggregrate
+from infrastructure.persistence.sqlalchemy.models.category_model import Category
 
 
 class CategoryMapper:

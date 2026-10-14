@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
+from infrastructure.persistence.sqlalchemy.database import Base
 
 
 class Category(Base):

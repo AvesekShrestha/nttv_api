@@ -2,10 +2,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.application.interfaces.team_repository_interface import ITeamRepository
-from src.domain.team.team_aggregate import TeamAggregate
-from src.infrastructure.persistence.sqlalchemy.mappers.team_infrastructure_mapper import TeamMapper
-from src.infrastructure.persistence.sqlalchemy.models.team_model import Team
+from application.interfaces.team_repository_interface import ITeamRepository
+from domain.team.team_aggregate import TeamAggregate
+from infrastructure.persistence.sqlalchemy.mappers.team_infrastructure_mapper import TeamMapper
+from infrastructure.persistence.sqlalchemy.models.team_model import Team
 
 class TeamRepository(ITeamRepository):
 

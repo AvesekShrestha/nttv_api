@@ -1,35 +1,33 @@
 from datetime import date, datetime, timedelta
-from os.path import exists
 
-from graphql import Token
-
-from src.application.dto.login_dto import LoginDTO
-from src.application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
-from src.application.dto.token_dto import AccessTokenResponseDTO
-from src.application.exceptions.already_logged_in_exception import AlreadyLoggedIn
-from src.application.exceptions.authentication_exception import AuthenticationRequired
-from src.application.exceptions.password_exception import InvalidPassword
-from src.application.interfaces.outbox_repository_interface import IOutboxRepository
-from src.application.shared.datetime_provider_interface import IDateTimeProvider
-from src.application.shared.jwt_payload import JWTPayload
-from src.application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
-from src.application.shared.unit_of_work_interface import IUnitOfWork
-from src.config import settings
-from src.domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
-from src.domain.outbox.entity.outbox_event import OutboxEvent
-from src.domain.token.token_aggregate import TokenAggregrate
-from src.domain.users.user_role import UserRole
-from src.application.auth.auth_service_interface import IAuthService
-from src.application.dto.register_dto import RegisterDTO
-from src.application.dto.user_response_dto import UserResponseDTO
-from src.application.exceptions.user_exception import InactiveUser, UserAlreadyExists, UserNotFound
-from src.application.interfaces.token_repository_interface import ITokenRepository
-from src.application.interfaces.user_repository_interface import IUserRepository
-from src.application.shared.hasher_interface import IHasher
-from src.application.shared.id_generator_interface import IIdGenerator
-from src.application.shared.jwt_generator_interface import IJWTGenerator
-from src.domain.users.user_aggregrate import UserAggregrate
-from src.application.mappers.auth_mapper import AuthMapper, UserMapper
+from application.dto.login_dto import LoginDTO
+from application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
+from application.dto.token_dto import AccessTokenResponseDTO
+from application.events.user_created_event import UserCreatedEvent
+from application.exceptions.already_logged_in_exception import AlreadyLoggedIn
+from application.exceptions.authentication_exception import AuthenticationRequired
+from application.exceptions.password_exception import InvalidPassword
+from application.interfaces.outbox_repository_interface import IOutboxRepository
+from application.shared.datetime_provider_interface import IDateTimeProvider
+from application.shared.jwt_payload import JWTPayload
+from application.shared.refresh_token_generator_interface import IRefreshTokenGenerator
+from application.shared.unit_of_work_interface import IUnitOfWork
+from config import settings
+from domain.exceptions.refresh_token_expired_exception import ExpiredRefreshToken
+from domain.outbox.entity.outbox_event import OutboxEvent
+from domain.token.token_aggregate import TokenAggregrate
+from domain.users.user_role import UserRole
+from application.auth.auth_service_interface import IAuthService
+from application.dto.register_dto import RegisterDTO
+from application.dto.user_response_dto import UserResponseDTO
+from application.exceptions.user_exception import InactiveUser, UserAlreadyExists, UserNotFound
+from application.interfaces.token_repository_interface import ITokenRepository
+from application.interfaces.user_repository_interface import IUserRepository
+from application.shared.hasher_interface import IHasher
+from application.shared.id_generator_interface import IIdGenerator
+from application.shared.jwt_generator_interface import IJWTGenerator
+from domain.users.user_aggregrate import UserAggregrate
+from application.mappers.auth_mapper import AuthMapper, UserMapper
 
 class AuthService(IAuthService):
     def __init__(
@@ -79,14 +77,16 @@ class AuthService(IAuthService):
 
         result : UserAggregrate = await self._user_repository.add(user)
 
+        event_data : UserCreatedEvent = UserCreatedEvent(
+            email=user.email,
+            role=user.role
+        )
         event = OutboxEvent.create(
+            key=user.id,
             event_id=self._id_generator.generate_event_id(),
             event_type="user.created",
             occurred_at=self._datetime_provider.now(),
-            data={
-                "username" : user.username,
-                "email" : user.email
-            }
+            data=event_data.model_dump_json()
         )
 
         await self._outbox_repository.add(event)

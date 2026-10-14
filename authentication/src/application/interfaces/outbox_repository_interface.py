@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.outbox.entity.outbox_event import OutboxEvent
+from domain.outbox.entity.outbox_event import OutboxEvent
 
 
 class IOutboxRepository(ABC):

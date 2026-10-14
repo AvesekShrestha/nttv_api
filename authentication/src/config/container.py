@@ -2,21 +2,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dependency_injector import containers, providers
 
 
-from src.application.auth.auth_service import AuthService
-from src.application.category.category_service import CategoryService
-from src.application.team.team_service import TeamService
+from application.auth.auth_service import AuthService
+from application.category.category_service import CategoryService
+from application.team.team_service import TeamService
 
-from src.infrastructure.identity.hasher import Hasher
-from src.infrastructure.identity.id_generator import IdGenerator
-from src.infrastructure.identity.datetime_provider import DateTimeProvider
-from src.infrastructure.identity.jwt_generator import JWTGenerator
-from src.infrastructure.identity.refresh_token_generator import RefreshTokenGenerator
-from src.infrastructure.persistence.sqlalchemy.repositories.outbox_repository import OutboxRepository
-from src.infrastructure.persistence.sqlalchemy.repositories.token_repository import TokenRepository
-from src.infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
-from src.infrastructure.persistence.sqlalchemy.repositories.category_repository import CategoryRepository
-from src.infrastructure.persistence.sqlalchemy.repositories.team_repository import TeamRepository
-from src.infrastructure.persistence.sqlalchemy.unit_of_work import UnitOfWork
+from infrastructure.identity.hasher import Hasher
+from infrastructure.identity.id_generator import IdGenerator
+from infrastructure.identity.datetime_provider import DateTimeProvider
+from infrastructure.identity.jwt_generator import JWTGenerator
+from infrastructure.identity.refresh_token_generator import RefreshTokenGenerator
+from infrastructure.persistence.sqlalchemy.repositories.outbox_repository import OutboxRepository
+from infrastructure.persistence.sqlalchemy.repositories.token_repository import TokenRepository
+from infrastructure.persistence.sqlalchemy.repositories.user_respository import UserRepository
+from infrastructure.persistence.sqlalchemy.repositories.category_repository import CategoryRepository
+from infrastructure.persistence.sqlalchemy.repositories.team_repository import TeamRepository
+from infrastructure.persistence.sqlalchemy.unit_of_work import UnitOfWork
+from infrastructure.messaging.kafka.producer import KafkaProducer
+from infrastructure.workers.outbox_worker import OutboxWorker
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -28,6 +30,7 @@ class Container(containers.DeclarativeContainer):
     jwt_generator = providers.Singleton(JWTGenerator)
     refresh_token_generator = providers.Singleton(RefreshTokenGenerator)
     datetime_provider = providers.Singleton(DateTimeProvider)
+    producer = providers.Singleton(KafkaProducer)
 
     unit_of_work = providers.Factory(
         UnitOfWork,
@@ -89,6 +92,12 @@ class Container(containers.DeclarativeContainer):
 
     )
 
-
+    outbox_worker = providers.Singleton(
+        OutboxWorker,
+        producer=producer,
+        outbox_repository=outbox_repository,
+        datetime_provider=datetime_provider,
+        unit_of_work=unit_of_work
+    )
 
 container = Container()

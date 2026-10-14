@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
-from src.infrastructure.persistence.sqlalchemy.models.user_model import User
+from infrastructure.persistence.sqlalchemy.database import Base
+from infrastructure.persistence.sqlalchemy.models.user_model import User
 
 
 class RefreshToken(Base):

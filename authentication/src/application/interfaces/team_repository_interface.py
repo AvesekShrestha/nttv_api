@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.team.team_aggregate import TeamAggregate
+from domain.team.team_aggregate import TeamAggregate
 
 
 class ITeamRepository(ABC):

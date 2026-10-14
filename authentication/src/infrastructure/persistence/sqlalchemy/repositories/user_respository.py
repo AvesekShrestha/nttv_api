@@ -1,11 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
-from src.domain.users.user_role import UserRole
-from src.application.interfaces.user_repository_interface import IUserRepository
-from src.infrastructure.persistence.sqlalchemy.models.user_model import User
-from src.infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
-from src.domain.users.user_aggregrate import UserAggregrate
+from domain.users.user_role import UserRole
+from application.interfaces.user_repository_interface import IUserRepository
+from infrastructure.persistence.sqlalchemy.models.user_model import User
+from infrastructure.persistence.sqlalchemy.mappers.user_infrastructure_mapper import UserMapper
+from domain.users.user_aggregrate import UserAggregrate
 
 
 class UserRepository(IUserRepository):

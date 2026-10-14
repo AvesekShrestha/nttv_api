@@ -1,5 +1,5 @@
-from src.application.dto.user_response_dto import UserResponseDTO
-from src.domain.users.user_aggregrate import UserAggregrate
+from application.dto.user_response_dto import UserResponseDTO
+from domain.users.user_aggregrate import UserAggregrate
 
 
 class UserMapper:

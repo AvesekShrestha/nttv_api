@@ -1,10 +1,10 @@
 import jwt
 
-from src.application.shared.jwt_generator_interface import IJWTGenerator
-from src.application.shared.jwt_payload import JWTPayload
-from src.application.exceptions.access_token_exception import InvalidAccessToken, ExpiredAccessToken
+from application.shared.jwt_generator_interface import IJWTGenerator
+from application.shared.jwt_payload import JWTPayload
+from application.exceptions.access_token_exception import InvalidAccessToken, ExpiredAccessToken
 
-from src.config import settings
+from config import settings
 
 class JWTGenerator(IJWTGenerator):
 

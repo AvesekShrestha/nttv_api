@@ -1,11 +1,11 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.interfaces.category_repository_interface import ICategoryRepository
-from src.domain.category.category_aggregrate import CategoryAggregrate
-from src.infrastructure.persistence.sqlalchemy.mappers.category_infrastructure_mapper import CategoryMapper
+from application.interfaces.category_repository_interface import ICategoryRepository
+from domain.category.category_aggregrate import CategoryAggregrate
+from infrastructure.persistence.sqlalchemy.mappers.category_infrastructure_mapper import CategoryMapper
 
-from src.infrastructure.persistence.sqlalchemy.models.category_model import Category
+from infrastructure.persistence.sqlalchemy.models.category_model import Category
 
 
 class CategoryRepository(ICategoryRepository):

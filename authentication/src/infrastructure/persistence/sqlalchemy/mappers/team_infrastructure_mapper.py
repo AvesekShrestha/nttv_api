@@ -1,8 +1,8 @@
-from src.domain.shared.level import Level
-from src.domain.team.team_aggregate import TeamAggregate
-from src.domain.team.entity.team_member_entity import TeamMember
-from src.infrastructure.persistence.sqlalchemy.models.team_model import Team
-from src.infrastructure.persistence.sqlalchemy.models.team_member_model import TeamMember as TeamMemberModel
+from domain.shared.level import Level
+from domain.team.team_aggregate import TeamAggregate
+from domain.team.entity.team_member_entity import TeamMember
+from infrastructure.persistence.sqlalchemy.models.team_model import Team
+from infrastructure.persistence.sqlalchemy.models.team_member_model import TeamMember as TeamMemberModel
 
 
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
+from infrastructure.persistence.sqlalchemy.database import Base
 
 class Team(Base):
     __tablename__ = "teams"

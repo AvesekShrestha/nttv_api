@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-from src.domain.category.category_aggregrate import CategoryAggregrate
+from domain.category.category_aggregrate import CategoryAggregrate
 
 class ICategoryRepository:
 

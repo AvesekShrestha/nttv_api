@@ -2,8 +2,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from src.application.shared.application_exception import ApplicationException
-from src.domain.shared.domain_exception import DomainException
+from application.shared.application_exception import ApplicationException
+from domain.shared.domain_exception import DomainException
 
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):

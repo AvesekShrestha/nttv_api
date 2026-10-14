@@ -1,4 +1,4 @@
-from src.domain.shared.domain_exception import DomainException
+from domain.shared.domain_exception import DomainException
 
 
 class ExpiredRefreshToken(DomainException) :

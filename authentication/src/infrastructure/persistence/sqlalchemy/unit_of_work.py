@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.shared.unit_of_work_interface import IUnitOfWork
+from application.shared.unit_of_work_interface import IUnitOfWork
 
 
 class UnitOfWork(IUnitOfWork):
@@ -9,6 +9,7 @@ class UnitOfWork(IUnitOfWork):
         self.session = session
 
     async def commit(self) -> None:
+        print(f"Id from unit of work : {id(self.session)}")
         await self.session.commit()
 
     async def rollback(self) -> None:

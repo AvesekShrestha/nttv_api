@@ -1,12 +1,12 @@
 import asyncio
 import getpass
 
-from src.config.container import container
+from config.container import container
 
-from src.infrastructure.persistence.sqlalchemy.database import session_factory
+from infrastructure.persistence.sqlalchemy.database import session_factory
 
-from src.domain.users.user_role import UserRole
-from src.domain.users.user_aggregrate import UserAggregrate
+from domain.users.user_role import UserRole
+from domain.users.user_aggregrate import UserAggregrate
 
 
 async def create_admin() -> None:

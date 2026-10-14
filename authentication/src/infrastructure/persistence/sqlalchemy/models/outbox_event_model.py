@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
+from infrastructure.persistence.sqlalchemy.database import Base
 
 
 class OutboxEventModel(Base):
@@ -13,6 +13,11 @@ class OutboxEventModel(Base):
     id: Mapped[str] = mapped_column(
         String(50),
         primary_key=True,
+    )
+
+    key : Mapped[str] = mapped_column(
+        String(50),
+        nullable=False
     )
 
     event_type: Mapped[str] = mapped_column(

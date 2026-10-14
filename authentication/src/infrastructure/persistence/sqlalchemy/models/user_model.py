@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
-from src.domain.users.user_role import UserRole
+from infrastructure.persistence.sqlalchemy.database import Base
+from domain.users.user_role import UserRole
 
 
 

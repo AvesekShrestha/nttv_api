@@ -1,4 +1,4 @@
-from src.application.shared.application_exception import ApplicationException
+from application.shared.application_exception import ApplicationException
 
 
 class AuthenticationRequired(ApplicationException) : 
