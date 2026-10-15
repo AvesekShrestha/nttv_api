@@ -5,10 +5,10 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from src.config import settings
+from ticket.config import settings
 
-from src.infrastructure.persistence.sqlalchemy.database import Base
-# from src.infrastructure.persistence.sqlalchemy.models.ticket_model import Ticket
+from ticket.infrastructure.persistence.sqlalchemy.database import Base
+# from infrastructure.persistence.sqlalchemy.models.ticket_model import Ticket
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
