@@ -1,168 +1,99 @@
 import asyncio
+import json
 import logging
-import os
 
 from confluent_kafka import Consumer, KafkaError
-from dotenv import load_dotenv
-from pydantic import ValidationError
-
-from src.application.delivery.delivery_service import DeliveryService
-from src.application.dto.create_notification_dto import CreateNotificationRequest
-from src.application.notification.create_notification import CreateNotification
-from src.domain.notification.notification_channel import NotificationChannel
-from src.infrastructure.identity.id_generator import IdGenerator
-from src.infrastructure.messaging.kafka.ticket_event import TicketEvent
-from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
-from src.infrastructure.persistence.sqlalchemy.repositories.notification_repository import (
-    SQLAlchemyNotificationRepository,
-)
-from src.infrastructure.providers.smtp.smtp_email_sender import SmtpEmailSender
 
 from src.config.settings import settings
+from src.infrastructure.messaging.kafka.event_router import (
+    EventRouter,
+    create_event_router,
+)
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
 def create_consumer() -> Consumer:
     return Consumer(
         {
-            "bootstrap.servers": os.environ["KAFKA_BOOTSTRAP_SERVERS"],
-            "group.id": os.environ["KAFKA_GROUP_ID"],
+            "bootstrap.servers": settings.kafka_bootstrap_servers,
+            "group.id": settings.kafka_group_id,
             "auto.offset.reset": "earliest",
             "enable.auto.commit": False,
         }
     )
 
 
-async def process_ticket_event(event: TicketEvent) -> None:
-    async with SessionLocal() as session:
+async def consume_events(
+    consumer: Consumer,
+    router: EventRouter,
+    topic: str,
+) -> None:
+    consumer.subscribe([topic])
+    logger.info("Subscribed to Kafka topic: %s", topic)
+
+    while True:
+        # Poll and commit on the same thread; Consumer is not thread-safe.
+        message = consumer.poll(1.0)
+
+        if message is None:
+            continue
+
+        error = message.error()
+
+        if error is not None:
+            if error.code() == KafkaError._PARTITION_EOF:
+                continue
+
+            logger.error("Kafka consumer error: %s", error)
+            continue
+
+        value = message.value()
+
+        if value is None:
+            raise ValueError(
+                f"Empty Kafka message at {topic}:"
+                f"{message.partition()}:{message.offset()}"
+            )
+
         try:
-            repository = SQLAlchemyNotificationRepository(session)
-            id_generator = IdGenerator()
-            email_sender = SmtpEmailSender(settings=settings)
+            payload = json.loads(value)
 
-            delivery_service = DeliveryService(
-                repository=repository,
-                email_sender=email_sender,
-            )
+            if not isinstance(payload, dict):
+                raise ValueError("Event payload must be a JSON object")
 
-            use_case = CreateNotification(
-                repository=repository,
-                id_generator=id_generator,
-                delivery_service=delivery_service,
-            )
-
-            for recipient in event.recipients:
-                dto = CreateNotificationRequest(
-                    recipient=str(recipient.email),
-                    channel=NotificationChannel.EMAIL,
-                    subject=f"[{event.subject.priority}] {event.subject.title}",
-                    message=(
-                        f"Ticket event: {event.event_type}\n"
-                        f"Category: {event.subject.category_id}\n"
-                        f"Priority: {event.subject.priority}\n"
-                        f"Level: {event.subject.level}\n"
-                        f"Occurred at: {event.occurred_at.isoformat()}"
-                    ),
-                )
-
-                notification = await use_case.execute(
-                    dto,
-                    source_event_id=event.event_id,
-                )
-
-                if notification is None:
-                    logger.info(
-                        "Skipping duplicate notification "
-                        "event_id=%s recipient=%s",
-                        event.event_id,
-                        recipient.email,
-                    )
-                else:
-                    logger.info(
-                        "Processed notification id=%s event_id=%s recipient=%s",
-                        notification.id,
-                        event.event_id,
-                        recipient.email,
-                    )
+            await router.dispatch(topic, payload)
 
         except Exception:
             logger.exception(
-                "Failed to process ticket event_id=%s",
-                event.event_id,
-            )
-            raise
-
-        finally:
-            if session.in_transaction():
-                await session.rollback()
-
-
-async def consume_ticket_events() -> None:
-    consumer = create_consumer()
-    topic = os.environ["KAFKA_TICKET_TOPIC"]
-
-    try:
-        consumer.subscribe([topic])
-        logger.info("Subscribed to Kafka topic: %s", topic)
-
-        while True:
-            message = await asyncio.to_thread(consumer.poll, 1.0)
-
-            if message is None:
-                continue
-
-            error = message.error()
-
-            if error is not None:
-                if error.code() == KafkaError._PARTITION_EOF:
-                    continue
-
-                logger.error("Kafka consumer error: %s", error)
-                continue
-
-            value = message.value()
-
-            if value is None:
-                logger.error("Received Kafka message with no value")
-                continue
-
-            try:
-                event = TicketEvent.model_validate_json(value)
-
-            except (ValidationError, ValueError):
-                logger.exception(
-                    "Invalid ticket event; offset not committed"
-                )
-                continue
-
-            try:
-                await process_ticket_event(event)
-
-            except Exception:
-                logger.exception(
-                    "Failed to process event_id=%s; offset not committed",
-                    event.event_id,
-                )
-                continue
-
-            await asyncio.to_thread(
-                consumer.commit,
-                message=message,
-                asynchronous=False,
-            )
-
-            logger.info(
-                "Committed event_id=%s topic=%s partition=%s offset=%s",
-                event.event_id,
+                "Event processing failed; message not committed. "
+                "topic=%s partition=%s offset=%s",
                 message.topic(),
                 message.partition(),
                 message.offset(),
             )
+            raise
 
+        consumer.commit(message=message, asynchronous=False)
+
+        logger.info(
+            "Committed topic=%s partition=%s offset=%s",
+            message.topic(),
+            message.partition(),
+            message.offset(),
+        )
+
+
+async def consume_ticket_events() -> None:
+    topic = settings.kafka_ticket_topic
+    consumer = create_consumer()
+    router = create_event_router(topic)
+
+    try:
+        await consume_events(consumer, router, topic)
     finally:
-        await asyncio.to_thread(consumer.close)
+        consumer.close()
+        logger.info("Kafka consumer closed")
 
 
 if __name__ == "__main__":
