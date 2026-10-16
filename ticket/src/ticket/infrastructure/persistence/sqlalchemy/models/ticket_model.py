@@ -6,7 +6,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 
 from ticket.infrastructure.persistence.sqlalchemy.database import Base
@@ -73,5 +73,15 @@ class Ticket(Base):
     resolved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+    activities : Mapped[list["TicketActivity"]] = relationship(
+        cascade="all, delete-orphan",
+        lazy="selectin"
+
+    )
+    assignments : Mapped[list["Assignment"]] = relationship(
+        cascade="all, delete-orphan",
+        lazy="selectin"
     )
 

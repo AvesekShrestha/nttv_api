@@ -1,11 +1,11 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from ticket.infrastructure.identity. import JWTGenerator
+from ticket.application.shared.jwt_generator_interface import IJWTGenerator
 
 
 class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, jwt_generator: JWTGenerator):
+    def __init__(self, app, jwt_generator: IJWTGenerator):
         super().__init__(app)
         self.jwt_generator = jwt_generator
 
