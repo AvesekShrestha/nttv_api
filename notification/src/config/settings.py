@@ -8,6 +8,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    database_url: str = Field(validation_alias="DATABASE_URL")
+
     smtp_host: str = Field(validation_alias="EMAIL_HOST")
     smtp_port: int = Field(validation_alias="EMAIL_PORT")
     smtp_email: str = Field(validation_alias="EMAIL_HOST_USER")
