@@ -9,7 +9,6 @@ class UnitOfWork(IUnitOfWork):
         self.session = session
 
     async def commit(self) -> None:
-        print(f"Id from unit of work : {id(self.session)}")
         await self.session.commit()
 
     async def rollback(self) -> None:

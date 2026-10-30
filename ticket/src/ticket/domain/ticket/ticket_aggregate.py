@@ -88,6 +88,9 @@ class TicketAggregrate(AggregrateRoot[str]):
     def add_activity(self, activity: TicketActivityEntity) -> None:
         self._activities.append(activity)
 
+    def clear_activities(self) -> None : 
+        self._activities.clear()
+
     def change_title(self, title: str) -> None:
         self._title = title
 
@@ -109,3 +112,4 @@ class TicketAggregrate(AggregrateRoot[str]):
     def mark_resolved(self, resolved_at: datetime) -> None:
         self._status = TicketStatus.RESOLVED
         self._resolved_at = resolved_at
+

@@ -1,5 +1,5 @@
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from ticket.api.rest_api import router
 
@@ -9,6 +9,16 @@ from ticket.api.rest_api.v1.middlewares.jwt_authentication_middleware import JWT
 from ticket.config.container import container
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 app.include_router(router, prefix="/api", )
 

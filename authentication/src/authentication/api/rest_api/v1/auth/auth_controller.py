@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, Request, Response
+import pydantic
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.functions import user
 
 from authentication.api.rest_api.v1.dependencies.authentication import get_current_user
 from authentication.api.rest_api.v1.dependencies.authorization import require_roles
+from authentication.application.auth import auth_service
 from authentication.application.dto.login_dto import LoginDTO
+from authentication.application.dto.otp_dto import OTPResendDTO, OTPVerifyDTO
 from authentication.application.dto.user_response_dto import UserResponseDTO
 from authentication.application.exceptions.authentication_exception import AuthenticationRequired
 
@@ -47,7 +50,7 @@ async def login(payload : LoginDTO, response: Response, session : AsyncSession =
         secure=False,
         samesite="lax",
         max_age=60 * 60 * 24 * settings.REFRESH_EXPIRE_DAYS,
-        path="/api/auth",
+        path="/api/v1/auth",
     )
     return LoginResponseDTO(
         user=result.user,
@@ -87,3 +90,23 @@ async def refresh(request : Request, response : Response, session = Depends(get_
 
     return await auth_service.refresh(refresh_token=refresh_token)
 
+@router.post("/resend-otp", response_model=bool)
+async def resend_otp(payload : OTPResendDTO, session : AsyncSession = Depends(get_session)):
+
+    container.session.override(session)
+    auth_service = container.auth_service()
+
+    result = await auth_service.resend_otp(payload=payload)
+
+    return result
+
+
+@router.post("/verify-otp", response_model=bool)
+async def verify_otp(payload : OTPVerifyDTO, session : AsyncSession = Depends(get_session)) : 
+
+    container.session.override(session)
+    auth_service = container.auth_service()
+
+    result = await auth_service.verify_otp(payload=payload)
+
+    return result

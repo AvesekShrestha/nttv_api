@@ -45,6 +45,12 @@ class Ticket(Base):
         default=TicketStatus.NEW.value,
     )
 
+    current_assignment_id : Mapped[str] = mapped_column(
+        String(30),
+        ForeignKey("assignments.id"),
+        nullable=False,
+    )
+
     category_id: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
@@ -74,14 +80,3 @@ class Ticket(Base):
         DateTime(timezone=True),
         nullable=True,
     )
-
-    activities : Mapped[list["TicketActivity"]] = relationship(
-        cascade="all, delete-orphan",
-        lazy="selectin"
-
-    )
-    assignments : Mapped[list["Assignment"]] = relationship(
-        cascade="all, delete-orphan",
-        lazy="selectin"
-    )
-
