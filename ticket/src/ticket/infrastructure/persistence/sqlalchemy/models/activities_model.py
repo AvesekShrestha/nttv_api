@@ -21,13 +21,6 @@ class TicketActivity(Base):
         index=True,
     )
 
-    assignment_id: Mapped[str | None] = mapped_column(
-        String(30),
-        nullable=True,
-        default=None,
-        index=True,
-    )
-
     activity_type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

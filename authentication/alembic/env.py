@@ -14,6 +14,7 @@ from authentication.infrastructure.persistence.sqlalchemy.models.team_model impo
 from authentication.infrastructure.persistence.sqlalchemy.models.team_member_model import TeamMember
 from authentication.infrastructure.persistence.sqlalchemy.models.category_model import Category
 from authentication.infrastructure.persistence.sqlalchemy.models.outbox_event_model import OutboxEventModel
+from authentication.infrastructure.persistence.sqlalchemy.models.opt_model import OTP
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

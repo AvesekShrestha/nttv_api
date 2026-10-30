@@ -6,7 +6,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 
 from ticket.infrastructure.persistence.sqlalchemy.database import Base
@@ -45,6 +45,12 @@ class Ticket(Base):
         default=TicketStatus.NEW.value,
     )
 
+    current_assignment_id : Mapped[str] = mapped_column(
+        String(30),
+        ForeignKey("assignments.id"),
+        nullable=False,
+    )
+
     category_id: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
@@ -74,4 +80,3 @@ class Ticket(Base):
         DateTime(timezone=True),
         nullable=True,
     )
-

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from authentication.application.dto.otp_dto import OTPResendDTO, OTPVerifyDTO
 from authentication.application.dto.token_dto import AccessTokenResponseDTO
 from authentication.application.dto.user_response_dto import UserResponseDTO
 from authentication.application.dto.login_response_dto import LoginResponseDTO, LoginResultDTO
@@ -28,3 +29,10 @@ class IAuthService(ABC):
 
     @abstractmethod
     async def refresh(self, refresh_token: str) -> AccessTokenResponseDTO : pass
+
+    @abstractmethod
+    async def resend_otp(self, payload : OTPResendDTO) -> bool : pass
+
+    @abstractmethod
+    async def verify_otp(self, payload : OTPVerifyDTO) -> bool : pass
+

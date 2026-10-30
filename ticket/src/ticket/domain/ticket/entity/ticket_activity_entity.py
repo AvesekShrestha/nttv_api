@@ -7,7 +7,6 @@ from ticket.domain.shared.entity import Entity
 @dataclass
 class TicketActivityEntity(Entity[str]):
     _ticket_id: str
-    _assignment_id: str | None
     _activity_type: str
     _actor_id: str
     _created_at: datetime | None = None
@@ -15,10 +14,6 @@ class TicketActivityEntity(Entity[str]):
     @property
     def ticket_id(self) -> str:
         return self._ticket_id
-
-    @property
-    def assignment_id(self) -> str | None:
-        return self._assignment_id
 
     @property
     def activity_type(self) -> str:
@@ -36,14 +31,12 @@ class TicketActivityEntity(Entity[str]):
     def create(
         id: str,
         ticket_id: str,
-        assignment_id: str | None,
         activity_type: str,
         actor_id: str,
     ) -> TicketActivityEntity:
         return TicketActivityEntity(
             _id=id,
             _ticket_id=ticket_id,
-            _assignment_id=assignment_id,
             _activity_type=activity_type,
             _actor_id=actor_id,
         )

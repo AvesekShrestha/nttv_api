@@ -8,3 +8,7 @@ class TicketStatus(StrEnum):
     ESCALATED = "ESCALATED"
     RESOLVED = "RESOLVED"
     CLOSED = "CLOSED"
+
+    @classmethod
+    def from_string(cls, value: str) -> TicketStatus:
+        return cls(value.strip().upper())
