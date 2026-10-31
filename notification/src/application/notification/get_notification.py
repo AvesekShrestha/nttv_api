@@ -1,7 +1,7 @@
 from src.application.interfaces.notification_repository_interface import (
     NotificationRepositoryInterface,
 )
-from src.domain.exceptions.notification_exception import NotificationNotFoundError
+from src.application.exceptions.notification_exception import NotificationNotFoundError
 from src.domain.notification.notification_aggregate import NotificationAggregrate
 
 

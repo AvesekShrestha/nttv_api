@@ -14,7 +14,7 @@ from src.infrastructure.persistence.sqlalchemy.database import (
     get_db,
 )
 from src.infrastructure.persistence.sqlalchemy.repositories.notification_repository import (
-    SQLAlchemyNotificationRepository,
+    NotificationRepository,
 )
 
 from src.config.settings import settings
@@ -26,7 +26,7 @@ from src.infrastructure.providers.smtp.smtp_email_sender import SmtpEmailSender
 async def get_notification_repository(
     session: AsyncSession = Depends(get_db),
 ) -> NotificationRepositoryInterface:
-    return SQLAlchemyNotificationRepository(session)
+    return NotificationRepository(session)
 
 
 def get_id_generator() -> IIdGenerator:

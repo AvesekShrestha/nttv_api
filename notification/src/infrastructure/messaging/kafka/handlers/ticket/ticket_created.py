@@ -1,44 +1,10 @@
 
-from datetime import datetime
-from typing import Any, Literal
-
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
+from src.infrastructure.messaging.kafka.events.ticket.ticket_created_event import (
+    TicketCreatedEvent,
+)
 from src.infrastructure.messaging.kafka.handlers.ticket.shared import (
     process_notifications,
 )
-
-
-class EventModel(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
-
-
-class TicketCreatedSubject(EventModel):
-    type: Literal["ticket"]
-    id: str = Field(min_length=1)
-
-
-class TicketCreatedRecipient(EventModel):
-    email: EmailStr
-
-
-class TicketCreatedData(EventModel):
-    category: str = Field(min_length=1)
-    priority: str = Field(min_length=1)
-    level: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    recipients: list[TicketCreatedRecipient] = Field(min_length=1)
-
-
-class TicketCreatedEvent(EventModel):
-    event_id: str = Field(min_length=1)
-    event_type: Literal["ticket_created"]
-    occurred_at: datetime
-    subject: TicketCreatedSubject
-    data: TicketCreatedData
 
 
 def build_message(event: TicketCreatedEvent) -> str:
@@ -53,7 +19,7 @@ def build_message(event: TicketCreatedEvent) -> str:
     )
 
 
-async def handle(payload: dict[str, Any]) -> None:
+async def handle(payload: dict[str, object]) -> None:
     event = TicketCreatedEvent.model_validate(payload)
 
     await process_notifications(
@@ -65,4 +31,4 @@ async def handle(payload: dict[str, Any]) -> None:
         ],
         subject=f"[New Ticket] {event.data.title}",
         message=build_message(event),
-    )
+   )

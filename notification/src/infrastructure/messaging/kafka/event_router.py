@@ -69,7 +69,7 @@ class EventRouter:
 def create_event_router(ticket_topic: str) -> EventRouter:
     router = EventRouter()
 
-    router.register(ticket_topic, "ticket_created", ticket_created.handle)
-    router.register(ticket_topic, "ticket_assigned", ticket_assigned.handle)
+    router.register(ticket_topic, "ticket.created", ticket_created.handle)
+    router.register(ticket_topic, "ticket.assigned", ticket_assigned.handle)
 
     return router

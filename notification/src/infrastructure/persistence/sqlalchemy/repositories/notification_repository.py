@@ -1,4 +1,6 @@
-from sqlalchemy import exists, select
+from sqlalchemy import exists, select, update,or_, and_ 
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +15,7 @@ from src.infrastructure.persistence.sqlalchemy.models.notification_model import 
 )
 
 
-class SQLAlchemyNotificationRepository(NotificationRepositoryInterface):
+class NotificationRepository(NotificationRepositoryInterface):
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -48,6 +50,8 @@ class SQLAlchemyNotificationRepository(NotificationRepositoryInterface):
                     created_at=notification.created_at,
                     sent_at=notification.sent_at,
                     failed_at=notification.failed_at,
+                    last_error=notification.last_error,
+                    attempt_count=notification.attempt_count,
                 )
                 self.session.add(model)
             else:
@@ -59,6 +63,7 @@ class SQLAlchemyNotificationRepository(NotificationRepositoryInterface):
                 existing.status = notification.status.value
                 existing.sent_at = notification.sent_at
                 existing.failed_at = notification.failed_at
+                existing.last_error = notification.last_error
     
             await self.session.commit()
             return True
@@ -100,6 +105,8 @@ class SQLAlchemyNotificationRepository(NotificationRepositoryInterface):
             _created_at=model.created_at,
             _sent_at=model.sent_at,
             _failed_at=model.failed_at,
+            _last_error=model.last_error,
+            _attempt_count=model.attempt_count,
         )
 
     async def exists_by_source_event(
@@ -116,3 +123,58 @@ class SQLAlchemyNotificationRepository(NotificationRepositoryInterface):
             )
         )
         return bool(result.scalar()) 
+
+    async def claim_for_delivery(self, notification_id: str) -> bool:
+        retry_before = datetime.now(timezone.utc) - timedelta(minutes=5)
+    
+        result = await self.session.execute(
+            update(NotificationModel)
+            .where(
+                NotificationModel.id == notification_id,
+                NotificationModel.attempt_count < 3,
+                or_(
+                    NotificationModel.status == NotificationStatus.PENDING.value,
+                    (
+                        (NotificationModel.status == NotificationStatus.FAILED.value)
+                        & (NotificationModel.failed_at <= retry_before)
+                    ),
+                ),
+            )
+            .values(
+                status=NotificationStatus.SENDING.value,
+                attempt_count=NotificationModel.attempt_count + 1,
+                last_error=None,
+                failed_at=None,
+            )
+            .returning(NotificationModel.id)
+        )
+    
+        claimed = result.scalar_one_or_none()
+    
+        await self.session.commit()
+    
+        return claimed is not None
+
+    async def get_pending_delivery_ids(
+        self,
+        limit: int = 50,
+    ) -> list[str]:
+        retry_before = datetime.now(timezone.utc) - timedelta(minutes=5)
+    
+        result = await self.session.execute(
+            select(NotificationModel.id)
+            .where(
+                NotificationModel.attempt_count < 3,
+                or_(
+                    NotificationModel.status == NotificationStatus.PENDING.value,
+                    and_(
+                        NotificationModel.status == NotificationStatus.FAILED.value,
+                        NotificationModel.failed_at <= retry_before,
+                    ),
+                ),
+            )
+            .order_by(NotificationModel.created_at)
+            .limit(limit)
+        )
+    
+        return list(result.scalars().all())

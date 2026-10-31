@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = Field(validation_alias="KAFKA_BOOTSTRAP_SERVERS")
     kafka_group_id: str = Field(validation_alias="KAFKA_GROUP_ID")
     kafka_ticket_topic: str = Field(validation_alias="KAFKA_TICKET_TOPIC")
+    kafka_ticket_dlq_topic: str = "ticket.events.dlq"
+    kafka_max_retries: int = 3
+    kafka_retry_delay_seconds: float = 5.0
+    delivery_worker_interval: int = 60
 
 
 settings = Settings() # type: ignore[call-arg]

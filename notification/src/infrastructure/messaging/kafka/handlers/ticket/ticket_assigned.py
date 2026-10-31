@@ -1,42 +1,11 @@
-from datetime import datetime
-from typing import Any, Literal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
+from src.infrastructure.messaging.kafka.events.ticket.ticket_assigned_event import (
+    TicketAssignedEvent,
+)
 from src.infrastructure.messaging.kafka.handlers.ticket.shared import (
     process_notifications,
 )
-
-
-class EventModel(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
-
-
-class TicketAssignedSubject(EventModel):
-    type: Literal["ticket"]
-    id: str = Field(min_length=1)
-
-
-class TicketAssignedRecipient(EventModel):
-    email: EmailStr
-
-
-class TicketAssignedData(EventModel):
-    team_id: str = Field(min_length=1)
-    agent_id: str = Field(min_length=1)
-    assignment_type: str = Field(min_length=1)
-    recipients: list[TicketAssignedRecipient] = Field(min_length=1)
-
-
-class TicketAssignedEvent(EventModel):
-    event_id: str = Field(min_length=1)
-    event_type: Literal["ticket_assigned"]
-    occurred_at: datetime
-    subject: TicketAssignedSubject
-    data: TicketAssignedData
 
 
 def build_message(event: TicketAssignedEvent) -> str:
