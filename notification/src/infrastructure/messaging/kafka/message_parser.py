@@ -17,10 +17,10 @@ def parse_message(message: Message) -> dict[str, Any]:
     try:
         payload = json.loads(value)
 
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         raise InvalidMessageError(
-            f"Invalid JSON payload: {exc}"
-        ) from exc
+            "Kafka message contains invalid JSON"
+        ) from None
 
     if not isinstance(payload, dict):
         raise InvalidMessageError(

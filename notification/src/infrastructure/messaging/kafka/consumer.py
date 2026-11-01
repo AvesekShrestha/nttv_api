@@ -17,9 +17,7 @@ from src.infrastructure.messaging.kafka.event_router import (
 from src.infrastructure.messaging.kafka.message_processor import (
     process_message,
 )
-from src.infrastructure.messaging.kafka.retry_policy import (
-    RetryPolicy,
-)
+from src.infrastructure.messaging.kafka.retry_policy import RetryPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +26,15 @@ async def consume_events(
     consumer: Consumer,
     producer: Producer,
     router: EventRouter,
-    topic: str,
+    topics: list[str],
     retry_policy: RetryPolicy,
 ) -> None:
-    consumer.subscribe([topic])
-    logger.info("Subscribed to Kafka topic: %s", topic)
+    consumer.subscribe(topics)
+
+    logger.info(
+        "Subscribed to Kafka topics: %s",
+        ", ".join(topics),
+    )
 
     while True:
         message = await asyncio.to_thread(consumer.poll, 1.0)
@@ -66,8 +68,11 @@ async def consume_events(
         )
 
 
-async def consume_ticket_events() -> None:
-    topic = settings.kafka_ticket_topic
+async def consume_notification_events() -> None:
+    topics = [
+        settings.kafka_ticket_topic,
+        settings.kafka_auth_topic,
+    ]
 
     retry_policy = RetryPolicy(
         max_attempts=settings.kafka_max_retries,
@@ -80,18 +85,24 @@ async def consume_ticket_events() -> None:
         producer = create_dead_letter_producer()
 
         try:
-            router = create_event_router(topic)
+            router = create_event_router(
+                ticket_topic=settings.kafka_ticket_topic,
+                auth_topic=settings.kafka_auth_topic,
+            )
 
             await consume_events(
                 consumer=consumer,
                 producer=producer,
                 router=router,
-                topic=topic,
+                topics=topics,
                 retry_policy=retry_policy,
             )
 
         finally:
-            remaining = await asyncio.to_thread(producer.flush, 10)
+            remaining = await asyncio.to_thread(
+                producer.flush,
+                10,
+            )
 
             if remaining:
                 logger.error(
@@ -108,7 +119,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     try:
-        asyncio.run(consume_ticket_events())
+        asyncio.run(consume_notification_events())
 
     except KeyboardInterrupt:
         logger.info("Kafka consumer stopped by user")

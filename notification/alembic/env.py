@@ -8,6 +8,9 @@ from src.infrastructure.persistence.sqlalchemy.base import Base
 from src.infrastructure.persistence.sqlalchemy.models.notification_model import (
     NotificationModel,
 )
+from src.infrastructure.persistence.sqlalchemy.models.auth_delivery_receipt_model import (
+    AuthDeliveryReceiptModel,
+)
 
 config = context.config
 

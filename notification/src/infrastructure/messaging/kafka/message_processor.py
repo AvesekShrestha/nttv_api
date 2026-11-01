@@ -16,6 +16,9 @@ from src.infrastructure.messaging.kafka.message_parser import (
     parse_message,
 )
 from src.infrastructure.messaging.kafka.retry_policy import RetryPolicy
+from src.application.exceptions.delivery_exception import (
+    PermanentDeliveryError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,18 +103,17 @@ async def process_message(
             "Kafka message missing topic, partition, or offset"
         )
 
-    # Parse the incoming message.
     try:
         payload = parse_message(message)
 
     except InvalidMessageError as exc:
         logger.warning(
-            "Invalid Kafka payload. topic=%s partition=%s "
-            "offset=%s reason=%s",
+            "Invalid Kafka payload. "
+            "topic=%s partition=%s offset=%s error_type=%s",
             topic,
             partition,
             offset,
-            exc,
+            type(exc).__name__,
         )
 
         await reject_message(
@@ -123,20 +125,22 @@ async def process_message(
         )
         return
 
-    # Dispatch with bounded retries.
     for attempt in range(1, retry_policy.max_attempts + 1):
         try:
             await router.dispatch(topic, payload)
 
-        except (ValidationError, UnknownEventHandlerError) as exc:
+        except (
+            ValidationError,
+            UnknownEventHandlerError,
+            PermanentDeliveryError,
+        ) as exc:
             logger.warning(
-                "Invalid Kafka event. topic=%s partition=%s "
-                "offset=%s error_type=%s reason=%s",
+                "Kafka event rejected. "
+                "topic=%s partition=%s offset=%s error_type=%s",
                 topic,
                 partition,
                 offset,
                 type(exc).__name__,
-                str(exc),
             )
 
             await reject_message(
@@ -149,25 +153,20 @@ async def process_message(
             return
 
         except Exception as exc:
-            logger.exception(
+            # Log metadata only. Exception text and tracebacks can
+            # contain validation input or SMTP recipient details.
+            logger.warning(
                 "Event processing failed. attempt=%s/%s "
-                "topic=%s partition=%s offset=%s",
+                "topic=%s partition=%s offset=%s error_type=%s",
                 attempt,
                 retry_policy.max_attempts,
                 topic,
                 partition,
                 offset,
+                type(exc).__name__,
             )
 
             if not retry_policy.should_retry(attempt):
-                logger.error(
-                    "Retries exhausted. Sending to DLT. "
-                    "topic=%s partition=%s offset=%s",
-                    topic,
-                    partition,
-                    offset,
-                )
-
                 await reject_message(
                     consumer,
                     producer,

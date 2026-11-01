@@ -10,6 +10,10 @@ from src.application.exceptions.delivery_exception import (
 from src.application.shared.email_sender_interface import EmailSenderInterface
 from src.config.settings import Settings
 
+from src.infrastructure.providers.smtp.email_template import (
+    render_email_html,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +30,11 @@ class SmtpEmailSender(EmailSenderInterface):
         message["To"] = to
         message["Subject"] = subject
         message.set_content(body)
+
+        message.add_alternative(
+            render_email_html(subject, body),
+            subtype="html",
+        )
 
         try:
             with smtplib.SMTP(

@@ -31,7 +31,7 @@ def _publish_dead_letter(
     if topic is None or partition is None or offset is None:
         raise RuntimeError("Missing Kafka message metadata")
 
-    raw_value = message.value()
+    is_auth_event = topic == settings.kafka_auth_topic
 
     record = {
         "source_topic": topic,
@@ -39,12 +39,24 @@ def _publish_dead_letter(
         "source_offset": offset,
         "failed_at": datetime.now(timezone.utc).isoformat(),
         "error_type": type(error).__name__,
-        "error_message": str(error),
         "attempts": attempts,
-        "raw_value_base64": base64.b64encode(
-            raw_value if raw_value is not None else b""
-        ).decode("ascii"),
     }
+
+    if is_auth_event:
+        record["payload_redacted"] = True
+    else:
+        raw_value = message.value()
+
+        record["error_message"] = str(error)
+        record["raw_value_base64"] = base64.b64encode(
+            raw_value if raw_value is not None else b""
+        ).decode("ascii")
+
+    dead_letter_topic = (
+        settings.kafka_auth_dlq_topic
+        if is_auth_event
+        else settings.kafka_ticket_dlq_topic
+    )
 
     delivery_error: KafkaError | None = None
     delivered = False
@@ -55,7 +67,7 @@ def _publish_dead_letter(
         delivered = err is None
 
     producer.produce(
-        topic=settings.kafka_ticket_dlq_topic,
+        topic=dead_letter_topic,
         key=f"{topic}:{partition}:{offset}".encode("utf-8"),
         value=json.dumps(record).encode("utf-8"),
         on_delivery=on_delivery,

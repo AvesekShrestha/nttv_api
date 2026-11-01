@@ -8,6 +8,11 @@ from src.infrastructure.messaging.kafka.handlers.ticket import (
     ticket_assigned,
 )
 
+from src.infrastructure.messaging.kafka.handlers.auth import (
+    otp_resend,
+    user_created,
+)
+
 logger = logging.getLogger(__name__)
 
 EventPayload = dict[str, Any]
@@ -60,16 +65,37 @@ class EventRouter:
             "Dispatching topic=%s event_type=%s event_id=%s",
             topic,
             event_type,
-            payload.get("event_id"),
+            payload.get("event_id") or payload.get("id"),
         )
 
         await handler(payload)
 
 
-def create_event_router(ticket_topic: str) -> EventRouter:
+def create_event_router(
+    ticket_topic: str,
+    auth_topic: str,
+) -> EventRouter:
     router = EventRouter()
 
-    router.register(ticket_topic, "ticket.created", ticket_created.handle)
-    router.register(ticket_topic, "ticket.assigned", ticket_assigned.handle)
+    router.register(
+        ticket_topic,
+        "ticket.created",
+        ticket_created.handle,
+    )
+    router.register(
+        ticket_topic,
+        "ticket.assigned",
+        ticket_assigned.handle,
+    )
+    router.register(
+        auth_topic,
+        "user.created",
+        user_created.handle,
+    )
+    router.register(
+        auth_topic,
+        "otp.resend",
+        otp_resend.handle,
+    )
 
     return router
