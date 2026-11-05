@@ -2,6 +2,9 @@ from enum import StrEnum
 
 class TicketActivityType(StrEnum):
     CREATED = "CREATED"
+    COMPLETED = "COMPLETED"
+    ACKNOWLEDGE = "ACKNOWLEDGE"
+    DISPATCHED = "DISPATCHED"
     FORWARDED = "FORWARDED"
     ESCALATED = "ESCALATED "
     TERMINATED = "TERMINATED"

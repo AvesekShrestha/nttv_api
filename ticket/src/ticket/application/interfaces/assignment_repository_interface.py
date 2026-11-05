@@ -13,16 +13,22 @@ class IAssignmentRepository(ABC):
     ) -> AssignmentAggregate | None: pass
 
     @abstractmethod
+    async def get_by_ticket_id(
+        self,
+        ticket_id: str,
+    ) -> list[AssignmentAggregate] : pass
+
+    @abstractmethod
     async def add(
         self,
-        assignment: AssignmentAggregate,
+        aggregate: AssignmentAggregate,
     ) -> AssignmentAggregate:
         pass
 
     @abstractmethod
     async def update(
         self,
-        assignment: AssignmentAggregate,
+        aggregate: AssignmentAggregate,
     ) -> AssignmentAggregate:
         pass
 

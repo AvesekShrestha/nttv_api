@@ -2,8 +2,6 @@ from enum import StrEnum
 
 class AssignmentStatus(StrEnum):
     PENDING = "PENDING"
-    ACKNOWLEDGED = "ACKNOWLEDGED"
-    CLAIMED = "CLAIMED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"

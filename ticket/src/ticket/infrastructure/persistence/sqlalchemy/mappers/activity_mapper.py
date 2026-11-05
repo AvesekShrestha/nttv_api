@@ -4,7 +4,7 @@ from ticket.infrastructure.persistence.sqlalchemy.models.activities_model import
 
 class TicketActivityMapper:
     @staticmethod
-    def to_entity(model: TicketActivity) -> TicketActivityEntity:
+    def to_domain(model: TicketActivity) -> TicketActivityEntity:
         return TicketActivityEntity(
             _id=model.id,
             _ticket_id=model.ticket_id,

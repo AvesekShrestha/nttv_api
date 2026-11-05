@@ -1,3 +1,3 @@
-from config.settings import Settings
+from ticket.config.settings import Settings
 
 settings = Settings()

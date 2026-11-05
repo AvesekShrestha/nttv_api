@@ -43,6 +43,12 @@ class IdGenerator(IIdGenerator):
 
         return f"AGNT-RCPT-{timestamp}-{random_part}"
 
+    def generate_event_id(self) -> str:
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        random_part = secrets.token_hex(2).upper()
+        return f"EVT-{timestamp}-{random_part}"
+
     def generate_random_id(self) -> str:
         
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

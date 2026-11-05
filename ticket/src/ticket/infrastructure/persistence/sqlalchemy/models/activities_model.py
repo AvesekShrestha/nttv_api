@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ticket.infrastructure.persistence.sqlalchemy.database import Base
 
@@ -26,9 +26,9 @@ class TicketActivity(Base):
         nullable=False,
     )
 
-    actor_id: Mapped[str] = mapped_column(
+    actor_id: Mapped[str | None] = mapped_column(
         String(30),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 
@@ -36,4 +36,8 @@ class TicketActivity(Base):
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
+    )
+
+    ticket: Mapped["Ticket"] = relationship(
+        back_populates="activities",
     )

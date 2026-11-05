@@ -18,10 +18,16 @@ class ITicketService(ABC) :
     async def get_by_id(self, ticket_id : str) -> TicketResponseDTO : pass
 
     @abstractmethod
-    async def get_all(self, page: int, limit : int) -> list[TicketResponseDTO] : pass
+    async def get_all(self, page: int | None = 1, limit : int | None = 10) -> list[TicketResponseDTO] : pass
 
     @abstractmethod
     async def create(self, payload : TicketCreateDTO, user_id : str) -> TicketResponseDTO: pass
 
     @abstractmethod
     async def delete(self, ticket_id : str) -> bool : pass
+
+    @abstractmethod
+    async def acknowldege(self, ticket_id: str, user_id : str) -> TicketResponseDTO : pass
+
+    @abstractmethod
+    async def complete(self, ticket_id: str, user_id : str) -> TicketResponseDTO : pass

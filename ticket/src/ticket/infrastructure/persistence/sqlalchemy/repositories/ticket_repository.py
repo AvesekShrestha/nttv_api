@@ -1,25 +1,37 @@
-import re
-
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from ticket.application.interfaces.ticket_repository_interface import ITicketRepository
-
+from ticket.application.interfaces.ticket_repository_interface import (
+    ITicketRepository,
+)
+from ticket.application.ticket.dto import ticket_create_dto
 from ticket.domain.ticket.ticket_aggregate import TicketAggregrate
+from ticket.infrastructure.persistence.sqlalchemy.mappers.ticket_mapper import (
+    TicketMapper,
+)
+from ticket.infrastructure.persistence.sqlalchemy.models.ticket_model import (
+    Ticket,
+)
 
-from ticket.infrastructure.persistence.sqlalchemy.mappers.ticket_mapper import TicketMapper
-from ticket.infrastructure.persistence.sqlalchemy.models.ticket_model import Ticket
 
+class TicketRepository(ITicketRepository):
 
-class TicketRepository(ITicketRepository) : 
-    def __init__(self, session : AsyncSession): 
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_id(self, ticket_id: str) -> TicketAggregrate | None:
+    async def get_by_id(
+        self,
+        ticket_id: str,
+    ) -> TicketAggregrate | None:
 
-        stmt = select(Ticket).where(Ticket.id == ticket_id)
+        stmt = (
+            select(Ticket)
+            .options(selectinload(Ticket.activities))
+            .where(Ticket.id == ticket_id)
+        )
+
         result = await self.session.execute(stmt)
-
         ticket = result.scalar_one_or_none()
 
         if ticket is None:
@@ -27,13 +39,23 @@ class TicketRepository(ITicketRepository) :
 
         return TicketMapper.to_domain(ticket)
 
-    async def get_all(self, limit: int = 5, page : int = 1) -> list[TicketAggregrate]:
+    async def get_all(
+        self,
+        limit: int = 5,
+        page: int = 1,
+    ) -> list[TicketAggregrate]:
 
-        offset = (page -1) * limit
+        offset = (page - 1) * limit
 
-        stmt = select(Ticket).offset(offset=offset).limit(limit=limit).order_by(Ticket.created_at.desc())
+        stmt = (
+            select(Ticket)
+            .options(selectinload(Ticket.activities))
+            .order_by(Ticket.created_at.desc(), Ticket.id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+
         result = await self.session.execute(stmt)
-
         tickets = result.scalars().all()
 
         return [
@@ -41,16 +63,22 @@ class TicketRepository(ITicketRepository) :
             for ticket in tickets
         ]
 
-    async def add(self, aggregate: TicketAggregrate) -> TicketAggregrate:
+    async def add(
+        self,
+        aggregate: TicketAggregrate,
+    ) -> TicketAggregrate:
 
-        ticket = TicketMapper.to_model(aggregate=aggregate)
+        ticket_model = TicketMapper.to_model(aggregate)
 
-        self.session.add(ticket)
+        self.session.add(ticket_model)
         await self.session.flush()
 
-        return TicketMapper.to_domain(ticket)
+        return TicketMapper.to_domain(ticket_model)
 
-    async def update(self, aggregate: TicketAggregrate) -> TicketAggregrate:
+    async def update(
+        self,
+        aggregate: TicketAggregrate,
+    ) -> TicketAggregrate:
 
         ticket = TicketMapper.to_model(aggregate=aggregate)
 
@@ -59,9 +87,12 @@ class TicketRepository(ITicketRepository) :
 
         return TicketMapper.to_domain(ticket)
 
-    async def delete(self, ticket_id: str) -> None:
-        statement = delete(Ticket).where(Ticket.id == ticket_id)
-        await self.session.execute(statement=statement)
-        await self.session.flush()
+    async def delete(
+        self,
+        ticket_id: str,
+    ) -> None:
 
-        return None
+        stmt = delete(Ticket).where(Ticket.id == ticket_id)
+
+        await self.session.execute(stmt)
+        await self.session.flush()

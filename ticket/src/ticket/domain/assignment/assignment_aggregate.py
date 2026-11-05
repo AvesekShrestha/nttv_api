@@ -1,25 +1,29 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from sqlalchemy import DateTime
-
+from ticket.application.assignment.exceptions.index import AgentNotFound
+from ticket.domain.assignment.exceptions.agent_exceptions import AgentAlreadyExists, AlreadyClaimed, NotAvailableToClaim
+from ticket.domain.assignment.exceptions.assignment_exception import AssignmentAlreadyStarted, AssignmentAlreadyTerminated, AssignmentIncompletable
+from ticket.domain.assignment.exceptions.team_recipient_exception import InvalidRequest, TeamAlreadyExists
 from ticket.domain.shared.aggregate import AggregrateRoot
 from ticket.domain.assignment.assignment_type import AssignmentType
 from ticket.domain.assignment.assignment_status import AssignmentStatus
-from ticket.domain.assignment.entity.team_recipient_entity import TeamRecipientEntity
-
+from ticket.domain.assignment.entity.team_recipient_entity import (
+    TeamRecipientEntity,
+)
 
 @dataclass
 class AssignmentAggregate(AggregrateRoot[str]):
     _ticket_id: str
-    _assigned_by: str
     _assignment_type: AssignmentType
 
     _status: AssignmentStatus = AssignmentStatus.PENDING
     _primary_agent_id: str | None = None
     _responsible_agent_id: str | None = None
 
-    _team_recipients: list[TeamRecipientEntity] = field(default_factory=list)
+    _team_recipients: list[TeamRecipientEntity] = field(
+        default_factory=list
+    )
 
     _assigned_at: datetime | None = None
     _acknowledgment_deadline_at: datetime | None = None
@@ -28,8 +32,8 @@ class AssignmentAggregate(AggregrateRoot[str]):
     _acknowledgment_sla_breached_at: datetime | None = None
     _resolution_sla_breached_at: datetime | None = None
 
-    _started_at: datetime | None = None
-    _acknowledged_at : datetime | None = None
+    _assigned_by: str | None = None
+    _acknowledged_at: datetime | None = None
     _completed_at: datetime | None = None
     _created_at: datetime | None = None
     _updated_at: datetime | None = None
@@ -39,32 +43,12 @@ class AssignmentAggregate(AggregrateRoot[str]):
         return self._ticket_id
 
     @property
-    def assigned_by(self) -> str:
+    def assigned_by(self) -> str | None:
         return self._assigned_by
 
     @property
     def assignment_type(self) -> AssignmentType:
         return self._assignment_type
-
-    @property
-    def assigned_at(self) -> datetime | None:
-        return self._assigned_at
-
-    @property
-    def started_at(self) -> datetime | None:
-        return self._started_at
-
-    @property
-    def completed_at(self) -> datetime | None:
-        return self._completed_at
-
-    @property
-    def created_at(self) -> datetime | None:
-        return self._created_at
-    
-    @property
-    def updated_at(self) -> datetime | None:
-        return self._updated_at
 
     @property
     def status(self) -> AssignmentStatus:
@@ -81,6 +65,26 @@ class AssignmentAggregate(AggregrateRoot[str]):
     @property
     def team_recipients(self) -> list[TeamRecipientEntity]:
         return self._team_recipients.copy()
+
+    @property
+    def assigned_at(self) -> datetime | None:
+        return self._assigned_at
+
+    @property
+    def acknowledged_at(self) -> datetime | None:
+        return self._acknowledged_at
+
+    @property
+    def completed_at(self) -> datetime | None:
+        return self._completed_at
+
+    @property
+    def created_at(self) -> datetime | None:
+        return self._created_at
+
+    @property
+    def updated_at(self) -> datetime | None:
+        return self._updated_at
 
     @property
     def acknowledgment_deadline_at(self) -> datetime | None:
@@ -102,36 +106,22 @@ class AssignmentAggregate(AggregrateRoot[str]):
     def create(
         id: str,
         ticket_id: str,
-        assigned_by: str,
         assignment_type: AssignmentType,
         assigned_at: datetime,
+        assigned_by: str | None = None,
         acknowledgment_deadline_at: datetime | None = None,
         resolution_deadline_at: datetime | None = None,
         primary_agent_id: str | None = None,
+        responsible_agent_id : str | None = None
     ) -> AssignmentAggregate:
-        if (
-            assignment_type == AssignmentType.INITIAL
-            and primary_agent_id is None
-        ):
-            raise ValueError(
-                "Initial assignment requires a primary agent"
-            )
-
-        if (
-            assignment_type != AssignmentType.INITIAL
-            and primary_agent_id is not None
-        ):
-            raise ValueError(
-                "Forwarding and escalation must not have a primary agent"
-            )
 
         return AssignmentAggregate(
             _id=id,
             _ticket_id=ticket_id,
-            _assigned_by=assigned_by,
             _assignment_type=assignment_type,
+            _assigned_by=assigned_by,
             _primary_agent_id=primary_agent_id,
-            _responsible_agent_id=primary_agent_id,
+            _responsible_agent_id=responsible_agent_id,
             _assigned_at=assigned_at,
             _acknowledgment_deadline_at=acknowledgment_deadline_at,
             _resolution_deadline_at=resolution_deadline_at,
@@ -139,20 +129,94 @@ class AssignmentAggregate(AggregrateRoot[str]):
             _updated_at=assigned_at,
         )
 
-    def add_team_recipient(self, recipients: list[TeamRecipientEntity]) -> None:
+    def _touch(self, at: datetime) -> None:
+        self._updated_at = at
+
+    def _is_terminal(self) -> bool:
+        return self._status in {
+            AssignmentStatus.COMPLETED,
+            AssignmentStatus.CANCELLED,
+            AssignmentStatus.SUPERSEDED,
+        }
+
+    def _find_agent(self, agent_id: str):
+        for team in self._team_recipients:
+            agent = team.get_agent(agent_id)
+
+            if agent is not None:
+                return agent
+
+        return None
+
+    def _disable_all_claims(self) -> None:
+        for team in self._team_recipients:
+            for agent in team.agents:
+                agent.disable_claiming()
+
+
+    def _enable_all_claims(self) -> None:
+        for team_recipient in self._team_recipients:
+            for agent_recipient in team_recipient.agents:
+                agent_recipient.enable_claiming()
+
+    def add_team_recipient(
+        self,
+        recipients: list[TeamRecipientEntity],
+    ) -> None:
         if self._status != AssignmentStatus.PENDING:
-            raise ValueError(
+            raise InvalidRequest(
                 "Recipients can only be added to a pending assignment"
             )
 
-        for recipient in recipients:
-            if any(
-                existing.team_id == recipient.team_id
-                for existing in self._team_recipients
-            ):
-                raise ValueError("Team already added to this assignment")
+        existing_team_ids = {
+            team.team_id
+            for team in self._team_recipients
+        }
 
+        incoming_team_ids = set()
+
+        for recipient in recipients:
+            if recipient.assignment_id != self.id:
+                raise InvalidRequest(
+                    "Team recipient belongs to a different assignment"
+                )
+
+            if (
+                recipient.team_id in existing_team_ids
+                or recipient.team_id in incoming_team_ids
+            ):
+                raise TeamAlreadyExists(
+                    "Team already added to this assignment"
+                )
+
+            incoming_team_ids.add(recipient.team_id)
+
+        for recipient in recipients:
             self._team_recipients.append(recipient)
+
+    def acknowledge(
+        self,
+        agent_id: str,
+        at: datetime,
+    ) -> None:
+        if self._is_terminal():
+            raise AssignmentAlreadyTerminated(
+                "A terminal assignment cannot be acknowledged"
+            )
+
+        agent = self._find_agent(agent_id)
+
+        if agent is None:
+            raise AgentNotFound(
+                "Agent is not a recipient of this assignment"
+            )
+
+        agent.acknowledge(at)
+
+        if self._acknowledged_at is None:
+            self._acknowledged_at = at
+
+        self._touch(at)
 
     def mark_acknowledgment_sla_breached(
         self,
@@ -161,22 +225,13 @@ class AssignmentAggregate(AggregrateRoot[str]):
         if self._acknowledgment_sla_breached_at is not None:
             return
 
-        if self._status in {
-            AssignmentStatus.COMPLETED,
-            AssignmentStatus.CANCELLED,
-            AssignmentStatus.SUPERSEDED,
-        }:
+        if self._status != AssignmentStatus.PENDING:
             return
 
         self._acknowledgment_sla_breached_at = at
+        self._enable_all_claims()
 
-        if self._assignment_type == AssignmentType.INITIAL:
-            for team in self._team_recipients:
-                for agent in team.agents:
-                    if agent.agent_id != self._primary_agent_id:
-                        agent.enable_claiming()
-
-        self._updated_at = at
+        self._touch(at)
 
     def mark_resolution_sla_breached(
         self,
@@ -185,123 +240,76 @@ class AssignmentAggregate(AggregrateRoot[str]):
         if self._resolution_sla_breached_at is not None:
             return
 
-        if self._status in {
-            AssignmentStatus.COMPLETED,
-            AssignmentStatus.CANCELLED,
-            AssignmentStatus.SUPERSEDED,
-        }:
+        if self._is_terminal():
             return
 
         self._resolution_sla_breached_at = at
-        self._updated_at = at
+        self._touch(at)
 
-    def claim(self, agent_id: str, at: datetime) -> None:
-        if self._status not in {
-            AssignmentStatus.PENDING,
-            AssignmentStatus.CLAIMED,
-        }:
-            raise ValueError("Assignment cannot be claimed in this status")
+    def claim(
+        self,
+        agent_id: str,
+        at: datetime,
+    ) -> None:
 
         if self._responsible_agent_id is not None:
-            raise ValueError("Assignment already has a responsible agent")
+            raise AlreadyClaimed(
+                "ticket has been already claimed"
+            )
 
-        recipient = next(
-            (
-                agent
-                for team in self._team_recipients
-                if (agent := team.get_agent(agent_id)) is not None
-            ),
-            None,
-        )
+        if self._status != AssignmentStatus.PENDING:
+            raise NotAvailableToClaim(
+                "Only pending assignments can be claimed"
+            )
 
-        if recipient is None:
-            raise ValueError(
+        agent = self._find_agent(agent_id)
+
+        if agent is None:
+            raise AgentNotFound(
                 "Agent is not a recipient of this assignment"
             )
 
-        recipient.claim(at)
+        agent.claim(at)
 
         self._responsible_agent_id = agent_id
-        self._status = AssignmentStatus.CLAIMED
-
-        # A successful claim makes all other recipients ineligible.
-        for team in self._team_recipients:
-            for agent in team.agents:
-                if agent.agent_id != agent_id:
-                    agent.disable_claiming()
-
-        self._updated_at = at
-
-    def mark_started(self, at: datetime) -> None:
-        if self._status != AssignmentStatus.CLAIMED:
-            raise ValueError(
-                "Only a claimed assignment can be started"
-            )
-
         self._status = AssignmentStatus.IN_PROGRESS
-        self._started_at = at
-        self._updated_at = at
+
+        self._disable_all_claims()
+
+        self._touch(at)
 
     def mark_completed(self, at: datetime) -> None:
         if self._status not in {
-            AssignmentStatus.CLAIMED,
             AssignmentStatus.IN_PROGRESS,
         }:
-            raise ValueError(
-                "Only a claimed or in-progress assignment can be completed"
+            raise AssignmentIncompletable(
+                "Only a in-progress assignment can be completed"
             )
 
         self._status = AssignmentStatus.COMPLETED
         self._completed_at = at
 
-        for team in self._team_recipients:
-            for agent in team.agents:
-                agent.disable_claiming()
-
-        self._updated_at = at
+        self._disable_all_claims()
+        self._touch(at)
 
     def mark_cancelled(self, at: datetime) -> None:
-        if self._status in {
-            AssignmentStatus.COMPLETED,
-            AssignmentStatus.SUPERSEDED,
-        }:
-            raise ValueError(
-                "Completed or superseded assignments cannot be cancelled"
+        if self._is_terminal():
+            raise AssignmentAlreadyTerminated(
+                "Terminal assignments cannot be cancelled"
             )
 
         self._status = AssignmentStatus.CANCELLED
 
-        for team in self._team_recipients:
-            for agent in team.agents:
-                agent.disable_claiming()
-
-        self._updated_at = at
+        self._disable_all_claims()
+        self._touch(at)
 
     def mark_superseded(self, at: datetime) -> None:
-        if self._status == AssignmentStatus.COMPLETED:
-            raise ValueError(
-                "Completed assignments cannot be superseded"
+        if self._is_terminal():
+            raise AssignmentAlreadyTerminated(
+                "Terminal assignments cannot be superseded"
             )
 
         self._status = AssignmentStatus.SUPERSEDED
 
-        for team in self._team_recipients:
-            for agent in team.agents:
-                agent.disable_claiming()
-
-        self._updated_at = at
-
-    def acknowledge(self, at : datetime)-> None :
-        if self._status == AssignmentStatus.COMPLETED:
-            raise ValueError(
-                "Completed assignments cannot be superseded"
-            )
-
-        for team in self._team_recipients:
-            for agent in team.agents : 
-                agent.disable_claiming()
-
-        self._status = AssignmentStatus.ACKNOWLEDGED
-        self._acknowledged_at = at
-        self._updated_at = at
-
+        self._disable_all_claims()
+        self._touch(at)

@@ -45,10 +45,10 @@ class Ticket(Base):
         default=TicketStatus.NEW.value,
     )
 
-    current_assignment_id : Mapped[str] = mapped_column(
+    current_assignment_id : Mapped[str | None] = mapped_column(
         String(30),
         ForeignKey("assignments.id"),
-        nullable=False,
+        nullable=True,
     )
 
     category_id: Mapped[str] = mapped_column(
@@ -69,14 +69,21 @@ class Ticket(Base):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    resolved_at: Mapped[datetime] = mapped_column(
+    resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+    activities: Mapped[list["TicketActivity"]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="TicketActivity.created_at",
     )

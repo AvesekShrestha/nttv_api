@@ -14,9 +14,11 @@ dependencies = [
     "dependency-injector>=4.49.1",
     "dotenv>=0.9.9",
     "fastapi>=0.143.1",
+    "httpx>=0.28.1",
     "psycopg[binary]>=3.3.6",
     "pydantic[email]>=2.14.1",
     "pyjwt>=2.15.1",
+    "sqlalchemy[asyncio]>=2.1.4",
     "uvicorn>=0.54.0",
 ]
 
