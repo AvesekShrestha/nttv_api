@@ -10,23 +10,21 @@ from authentication.config.container import container
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173"
-    ],
-    allow_credentials=True
-)
-
-app.include_router(router, prefix="/api", )
+app.include_router(router, prefix="/api")
 
 app.add_middleware(
     JWTAuthenticationMiddleware,
-    jwt_generator=container.jwt_generator()
+    jwt_generator=container.jwt_generator(),
 )
 
 app.add_middleware(
     ErrorHandlerMiddleware,
 )
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_headers=["*"],
+    allow_methods=["*"],
+)
