@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 class AssignmentType(StrEnum):
-    INITIAL = "INITIAL"
+    SYSTEM = "SYSTEM"
     FORWARD = "FORWARD"
     ESCALATION = "ESCALATION"
 

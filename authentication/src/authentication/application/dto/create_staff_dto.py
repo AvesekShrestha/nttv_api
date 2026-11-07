@@ -8,6 +8,5 @@ class CreateStaffDTO(BaseModel):
     email : EmailStr
     password : str
     role : UserRole
-    level : Level
-
+    level : Level | None = None
 

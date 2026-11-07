@@ -1,7 +1,9 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, func, or_, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from authentication.application.dto.category_query_dto import CategoryQueryDTO
 from authentication.application.interfaces.category_repository_interface import ICategoryRepository
+from authentication.application.shared.pagination_response import PaginatedResponse
 from authentication.domain.category.category_aggregrate import CategoryAggregrate
 from authentication.infrastructure.persistence.sqlalchemy.mappers.category_infrastructure_mapper import CategoryMapper
 
@@ -30,17 +32,72 @@ class CategoryRepository(ICategoryRepository):
 
     async def get_all(
         self,
-    ) -> list[CategoryAggregrate]:
+        query : CategoryQueryDTO
+    ) -> PaginatedResponse[CategoryAggregrate]:
 
-        stmt = select(Category)
+        filters = []
+
+
+        if query.is_active is not None:
+            filters.append(
+                Category.is_active == query.is_active
+            )
+
+        if query.search is not None and query.search.strip():
+            search_term = f"%{query.search.strip()}%"
+
+            filters.append(
+                or_(
+                    Category.name.ilike(search_term),
+                    Category.description.ilike(search_term),
+                )
+            )
+
+        count_stmt = (
+            select(func.count())
+            .select_from(Category)
+            .where(*filters)
+        )
+
+        total = await self.session.scalar(count_stmt)
+
+        sort_columns = {
+            "name": Category.name,
+            "created_at": Category.created_at,
+            "updated_at": Category.updated_at,
+        }
+
+        sort_column = sort_columns[query.sort_by]
+
+        if query.sort_order == "asc":
+
+            ordering = asc(sort_column)
+        else:
+            ordering = desc(sort_column)
+
+        offset = (query.page - 1) * query.limit
+
+        stmt = (
+            select(Category)
+            .where(*filters)
+            .order_by(ordering, Category.created_at)
+            .offset(offset)
+            .limit(query.limit)
+        )
+
         result = await self.session.execute(stmt)
 
-        categories = result.scalars().all()
+        teams = result.scalars().all()
 
-        return [
-            CategoryMapper.to_domain(category)
-            for category in categories
-        ]
+        return PaginatedResponse(
+            items=[
+                CategoryMapper.to_domain(model=team)
+                for team in teams
+            ],
+            total=total or 0,
+            page=query.page,
+            limit=query.limit,
+        )
 
     async def add(
         self,

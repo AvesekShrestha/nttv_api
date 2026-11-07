@@ -26,7 +26,7 @@ async def create_admin() -> None:
 
         user_repository = container.user_repository()
         hasher = container.hasher()
-        id_generator = container.id_genertor()
+        id_generator = container.id_generator()
 
         existing_user = await user_repository.get_by_email(email)
 

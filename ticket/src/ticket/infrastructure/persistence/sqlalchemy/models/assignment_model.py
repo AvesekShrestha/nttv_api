@@ -44,10 +44,9 @@ class Assignment(Base):
         index=True,
     )
 
-    responsible_agent_id: Mapped[str | None] = mapped_column(
+    responsible_agent_id : Mapped[str | None] = mapped_column(
         String(30),
-        nullable=True,
-        index=True,
+        nullable=True
     )
 
     assigned_by: Mapped[str] = mapped_column(
@@ -77,11 +76,6 @@ class Assignment(Base):
     )
 
     resolution_sla_breached_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
-    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

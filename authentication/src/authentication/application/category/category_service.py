@@ -1,9 +1,11 @@
 from authentication.application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
+from authentication.application.dto.category_query_dto import CategoryQueryDTO
 from authentication.application.exceptions.category_exception import CategoryDoesNotExists
 from authentication.application.interfaces.category_repository_interface import ICategoryRepository
 from authentication.application.category.category_service_interface import ICategoryService
 
 from authentication.application.shared.id_generator_interface import IIdGenerator
+from authentication.application.shared.pagination_response import PaginatedResponse
 from authentication.application.shared.unit_of_work_interface import IUnitOfWork
 from authentication.domain.category.category_aggregrate import CategoryAggregrate
 
@@ -36,14 +38,20 @@ class CategoryService(ICategoryService):
 
     async def get_all(
         self,
-    ) -> list[CategoryResponseDTO]:
+        query : CategoryQueryDTO
+    ) -> PaginatedResponse[CategoryResponseDTO]:
 
-        categories = await self.category_repository.get_all()
+        categories = await self.category_repository.get_all(query=query)
 
-        return [
-            self._to_response(category)
-            for category in categories
-        ]
+        return PaginatedResponse(
+            items=[
+                self._to_response(category)
+                for category in categories.items
+            ],
+            total=categories.total,
+            page=categories.page,
+            limit=categories.limit
+        )
 
     async def create(
         self,

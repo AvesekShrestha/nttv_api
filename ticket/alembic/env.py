@@ -8,10 +8,17 @@ from alembic import context
 from ticket.config import settings
 
 from ticket.infrastructure.persistence.sqlalchemy.database import Base
-# from infrastructure.persistence.sqlalchemy.models.ticket_model import Ticket
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+from ticket.infrastructure.persistence.sqlalchemy.models.ticket_model import Ticket
+from ticket.infrastructure.persistence.sqlalchemy.models.activities_model import TicketActivity
+from ticket.infrastructure.persistence.sqlalchemy.models.assignment_model import Assignment
+from ticket.infrastructure.persistence.sqlalchemy.models.assignment_team_recipient_model import AssignmentTeamRecipient
+from ticket.infrastructure.persistence.sqlalchemy.models.assignment_agent_recipient_model import AssignmentAgentRecipient
+from ticket.infrastructure.persistence.sqlalchemy.models.outbox_model import OutboxEventModel
+from ticket.infrastructure.persistence.sqlalchemy.models.processed_event_model import ProcessedEvent
+from ticket.infrastructure.persistence.sqlalchemy.models.round_robin_model import RoundRobinModel
+
+
 config = context.config
 
 config.set_main_option(

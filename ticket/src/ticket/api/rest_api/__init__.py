@@ -1,4 +1,7 @@
 from fastapi import APIRouter
 
+from ticket.api.rest_api.v1 import router as v1_router
+
 router = APIRouter()
 
+router.include_router(router=v1_router, prefix="/v1")

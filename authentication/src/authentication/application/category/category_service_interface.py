@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
 from authentication.application.dto.category_dto import CategoryCreateDTO, CategoryResponseDTO, CategoryUpdateDTO
+from authentication.application.dto.category_query_dto import CategoryQueryDTO
+from authentication.application.shared.pagination_response import PaginatedResponse
 
 class ICategoryService(ABC):
 
@@ -14,7 +16,8 @@ class ICategoryService(ABC):
     @abstractmethod
     async def get_all(
         self,
-    ) -> list[CategoryResponseDTO]:
+        query : CategoryQueryDTO
+    ) -> PaginatedResponse[CategoryResponseDTO]:
         pass
 
     @abstractmethod

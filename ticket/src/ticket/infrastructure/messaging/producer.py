@@ -17,14 +17,16 @@ class KafkaProducer(IProducer):
         self.producer = AIOProducer(config)
 
     async def produce(self, event: KafkaEvent) -> None:
+        print(f"Publishing event: {event.id}")
+        print(f"Topic: ticket.events")
+        print(f"Payload: {event.model_dump_json()}")
+
         delivery_future = await self.producer.produce(
-            topic="auth.events",
+            topic="ticket.events",
             key=event.key,
             value=event.model_dump_json(),
         )
 
-        # Wait for Kafka to confirm delivery.
-        # Raises an exception if delivery fails.
         message = await delivery_future
 
         print(
@@ -32,6 +34,5 @@ class KafkaProducer(IProducer):
             f"{message.topic()} [{message.partition()}] "
             f"offset={message.offset()}"
         )
-
     async def close(self) -> None:
         await self.producer.close()

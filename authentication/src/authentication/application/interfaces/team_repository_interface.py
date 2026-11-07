@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
-from authentication.domain.team.team_aggregate import TeamAggregate
+from authentication.application.shared.pagination_response import PaginatedResponse
+from authentication.application.dto.team_query_dto import TeamQueryDTO
 
+from authentication.domain.team.team_aggregate import TeamAggregate
 
 class ITeamRepository(ABC):
 
@@ -15,8 +17,15 @@ class ITeamRepository(ABC):
     @abstractmethod
     async def get_all(
         self,
-    ) -> list[TeamAggregate]:
+        query : TeamQueryDTO
+    ) -> PaginatedResponse[TeamAggregate]:
         pass
+
+    @abstractmethod
+    async def get_by_ids(
+        self,
+        team_ids : list[str]
+    ) -> list[TeamAggregate] : pass
 
     @abstractmethod
     async def add(
@@ -38,3 +47,4 @@ class ITeamRepository(ABC):
         team_id: str,
     ) -> None:
         pass
+

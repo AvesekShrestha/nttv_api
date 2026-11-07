@@ -21,7 +21,7 @@ class OTP(Base):
     )
 
     otp_hash: Mapped[str] = mapped_column(
-        String(64),
+        String(200),
         nullable=False,
     )
 
