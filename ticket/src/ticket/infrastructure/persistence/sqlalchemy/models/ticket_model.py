@@ -47,7 +47,6 @@ class Ticket(Base):
 
     current_assignment_id : Mapped[str | None] = mapped_column(
         String(30),
-        ForeignKey("assignments.id"),
         nullable=True,
     )
 

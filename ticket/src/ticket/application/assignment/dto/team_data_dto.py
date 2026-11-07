@@ -1,6 +1,13 @@
 from datetime import datetime
 from pydantic import BaseModel
 
+
+class PaginatedResponseDTO[T](BaseModel):
+    items: list[T]
+    total: int
+    page: int
+    limit: int
+
 class TeamMemberResponseDTO(BaseModel):
     id: str
     user_id: str

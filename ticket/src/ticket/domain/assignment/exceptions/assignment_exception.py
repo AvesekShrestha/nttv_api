@@ -42,3 +42,9 @@ class InitialAssignmentNotFound(DomainException) :
     def __init__(self, message: str, status=404):
         super().__init__(message, status)
 
+class AlreadyAcknowledged(DomainException) :
+    code: str = "ALREADY_ACK"
+
+    def __init__(self, message: str, status=400):
+        super().__init__(message, status)
+

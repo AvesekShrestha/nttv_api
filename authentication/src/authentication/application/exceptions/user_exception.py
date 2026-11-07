@@ -18,3 +18,16 @@ class InactiveUser(ApplicationException):
 
     def __init__(self, message: str, status=403):
         super().__init__(message, status)
+
+class OnlyAgents(ApplicationException):
+    code: str = "ONLY_AGENTS"
+
+    def __init__(self, message: str, status=400):
+        super().__init__(message, status)
+
+class InvalidRequest(ApplicationException) : 
+    code: str = "INVALID_REQUEST"
+
+    def __init__(self, message: str, status=400):
+        super().__init__(message, status)
+

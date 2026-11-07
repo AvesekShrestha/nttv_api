@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from ticket.application.shared.pagination_response_dto import PaginatedResponse
+from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
 from ticket.domain.ticket.ticket_aggregate import TicketAggregrate
 
 from ticket.application.ticket.dto.ticket_create_dto import TicketCreateDTO
@@ -18,7 +20,7 @@ class ITicketService(ABC) :
     async def get_by_id(self, ticket_id : str) -> TicketResponseDTO : pass
 
     @abstractmethod
-    async def get_all(self, page: int | None = 1, limit : int | None = 10) -> list[TicketResponseDTO] : pass
+    async def get_all(self, query : TicketQueryDTO) -> PaginatedResponse[TicketResponseDTO] : pass
 
     @abstractmethod
     async def create(self, payload : TicketCreateDTO, user_id : str) -> TicketResponseDTO: pass

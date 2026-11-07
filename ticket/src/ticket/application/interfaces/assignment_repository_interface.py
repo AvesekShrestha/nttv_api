@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+from ticket.application.assignment.dto.assignment_query_dto import AssignmentQueryDTO
+from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.domain.assignment.assignment_aggregate import AssignmentAggregate
 
 
@@ -17,6 +19,13 @@ class IAssignmentRepository(ABC):
         self,
         ticket_id: str,
     ) -> list[AssignmentAggregate] : pass
+
+    @abstractmethod
+    async def get_all(
+        self,
+        query : AssignmentQueryDTO
+    ) -> PaginatedResponse[AssignmentAggregate] : 
+        pass
 
     @abstractmethod
     async def add(

@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 
 from authentication.application.dto.team_dto import AddTeamMemberDTO, RemoveTeamMember, TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO
+from authentication.application.dto.team_query_dto import TeamQueryDTO
+from authentication.application.shared.pagination_response import PaginatedResponse
+from authentication.application.dto.user_response_dto import UserResponseDTO
 
 
 class ITeamService(ABC):
@@ -15,7 +18,8 @@ class ITeamService(ABC):
     @abstractmethod
     async def get_all(
         self,
-    ) -> list[TeamDetailResponseDTO]:
+        query : TeamQueryDTO
+    ) -> PaginatedResponse[TeamDetailResponseDTO] : 
         pass
 
     @abstractmethod
@@ -45,4 +49,12 @@ class ITeamService(ABC):
 
     @abstractmethod
     async def remove_team_member(self, team_id : str, user_id : str) -> TeamDetailResponseDTO: pass
+
+    @abstractmethod
+    async def get_by_ids(
+        self,
+        team_ids: list[str],
+    ) -> list[TeamDetailResponseDTO]:
+        pass
+
 

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from ticket.application.shared.pagination_response_dto import PaginatedResponse
+from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
 from ticket.domain.ticket.ticket_aggregate import TicketAggregrate
 
 
@@ -15,9 +17,8 @@ class ITicketRepository(ABC):
     @abstractmethod
     async def get_all(
         self,
-        limit: int = 5,
-        page: int = 1,
-    ) -> list[TicketAggregrate]:
+        query : TicketQueryDTO
+    ) -> PaginatedResponse[TicketAggregrate]:
         raise NotImplementedError
 
     @abstractmethod

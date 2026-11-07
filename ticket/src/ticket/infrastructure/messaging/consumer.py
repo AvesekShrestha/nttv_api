@@ -12,8 +12,10 @@ from ticket.application.interfaces.processed_event_repository_interface import (
 from ticket.application.events.kafka_event import KafkaEvent
 from ticket.application.events.ticket_created_event import TicketCreatedEvent
 from ticket.application.assignment.assignment_service_interface import IAssignmentService
+from ticket.application.shared.application_exception import ApplicationException
 from ticket.application.shared.date_time_provider_interface import IDateTimeProvider
 from ticket.domain.event.entity.processed_event_entity import ProcessedEventEntity
+from ticket.domain.shared.domain_exception import DomainException
 
 
 
@@ -21,7 +23,6 @@ class Dispatcher:
 
     def __init__(
         self,
-        bootstrap_servers: str,
         processed_event_repository : IProcessedEventRepository,
         assignment_service : IAssignmentService,
         datetime_provider : IDateTimeProvider
@@ -66,12 +67,15 @@ class Dispatcher:
                 try:
                     payload = message.value()
 
+                    print(payload)
                     if payload is None:
                         raise ValueError("Kafka message payload is empty")
 
                     event = KafkaEvent[TicketCreatedEvent].model_validate_json(
                             payload
                         )
+
+                    print(event)
 
                     if event.event_type != "ticket.created":
                         self.consumer.commit(
@@ -81,10 +85,18 @@ class Dispatcher:
                         continue
 
                     ticket_id = event.data.ticket_id
+                    print(f"printing ticket_id from the consumer : {ticket_id}")
 
                     processed : bool = await self.processed_event_repository.exists(event_id=event.id)
 
-                    if processed : raise EventAlreadyProcessed(f"Event with id : {event.id} is already processed")
+                    if processed:
+                        print(f"Event already processed: {event.id}")
+
+                        self.consumer.commit(
+                            message=message,
+                            asynchronous=False,
+                        )
+                        continue
 
                     processed_event = ProcessedEventEntity.create(
                         event_id=event.id,
@@ -99,6 +111,9 @@ class Dispatcher:
                         message=message,
                         asynchronous=False,
                     )
+
+                except (ApplicationException, DomainException) as e:
+                    print(f"Printing error message from consumer : {e.message} with status : {e.status}")
 
                 except Exception as exc:
                     print(f"Failed to process Kafka message: {exc}")

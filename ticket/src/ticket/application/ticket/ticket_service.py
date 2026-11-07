@@ -4,7 +4,9 @@ from sqlalchemy.sql.functions import user
 from ticket.application.events.kafka_event import KafkaEvent
 from ticket.application.events.ticket_acknowledge_event import TicketAcknowledgeEvent
 from ticket.application.events.ticket_completed_event import TicketCompletedEvent
+from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.application.ticket.dto.activity_response_dto import TicketActivityResponseDTO
+from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
 from ticket.domain.assignment.exceptions.assignment_exception import AssignmentNotFound
 from ticket.domain.outbox.entity.outbox_event_entity import OutboxEvent
 from ticket.domain.ticket.entity.ticket_activity_entity import TicketActivityEntity
@@ -54,23 +56,25 @@ class TicketService(ITicketService) :
     async def get_by_id(self, ticket_id: str) -> TicketResponseDTO:
 
         ticket = await self.ticket_repository.get_by_id(ticket_id=ticket_id)
-        
+
         if ticket is None: 
             raise TicketNotFound(f"Ticket with id:{ticket_id} not found")
 
         return self._to_response(ticket)
 
-    async def get_all(self, page:int | None = 1, limit:int | None = 5) -> list[TicketResponseDTO]:
+    async def get_all(self, query : TicketQueryDTO) -> PaginatedResponse[TicketResponseDTO]:
 
-        if page is None : page = 1
-        if limit is None : limit = 5
+        tickets = await self.ticket_repository.get_all(query=query)
 
-        tickets = await self.ticket_repository.get_all(limit=limit, page=page)
-
-        return [
-            self._to_response(ticket)
-            for ticket in tickets
-        ]
+        return PaginatedResponse(
+            items=[
+                self._to_response(ticket)
+                for ticket in tickets.items
+            ],
+            total=tickets.total,
+            page=tickets.page,
+            limit=tickets.limit
+        )
 
     async def create(self, payload : TicketCreateDTO, user_id : str) -> TicketResponseDTO:
 
@@ -146,6 +150,7 @@ class TicketService(ITicketService) :
         )
 
         await self.ticket_repository.update(ticket)
+        await self.assignment_repository.update(aggregate=assignment)
 
         event_data : TicketAcknowledgeEvent = TicketAcknowledgeEvent(
             ticket_id=ticket_id,
@@ -156,7 +161,7 @@ class TicketService(ITicketService) :
         event = OutboxEvent.create(
             key=user_id,
             event_id=event_id,
-            event_type="ticket.acknowledge",
+            event_type="ticket.acknowledged",
             occurred_at=now,
             data=event_data.model_dump(mode="json")
         )
@@ -215,8 +220,6 @@ class TicketService(ITicketService) :
 
         await self.unit_of_work.commit()
         return self._to_response(aggregate=ticket)
-
-
 
 
     def _to_response(

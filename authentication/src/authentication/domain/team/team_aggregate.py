@@ -99,6 +99,7 @@ class TeamAggregate(AggregrateRoot[str]):
         ]
 
     def activate_member(self, member_id: str) -> None:
+
         for member in self._members:
             if member.id == member_id:
                 member.change_activation(True)

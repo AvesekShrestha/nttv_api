@@ -38,6 +38,7 @@ class AssignmentResponseDTO:
     team_recipients: list[TeamRecipientResponseDTO]
 
     assigned_at: datetime | None
+    acknowledged_at : datetime | None
     acknowledgment_deadline_at: datetime | None
     resolution_deadline_at: datetime | None
 

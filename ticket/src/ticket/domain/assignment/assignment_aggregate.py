@@ -3,7 +3,7 @@ from datetime import datetime
 
 from ticket.application.assignment.exceptions.index import AgentNotFound
 from ticket.domain.assignment.exceptions.agent_exceptions import AgentAlreadyExists, AlreadyClaimed, NotAvailableToClaim
-from ticket.domain.assignment.exceptions.assignment_exception import AssignmentAlreadyStarted, AssignmentAlreadyTerminated, AssignmentIncompletable
+from ticket.domain.assignment.exceptions.assignment_exception import AlreadyAcknowledged, AssignmentAlreadyStarted, AssignmentAlreadyTerminated, AssignmentIncompletable
 from ticket.domain.assignment.exceptions.team_recipient_exception import InvalidRequest, TeamAlreadyExists
 from ticket.domain.shared.aggregate import AggregrateRoot
 from ticket.domain.assignment.assignment_type import AssignmentType
@@ -211,10 +211,20 @@ class AssignmentAggregate(AggregrateRoot[str]):
                 "Agent is not a recipient of this assignment"
             )
 
+        if agent.acknowledged_at is not None:
+            raise AlreadyAcknowledged("Ticket already acknowledged")
+
         agent.acknowledge(at)
+        agent.mark_notified(at)
+        agent.claim(at)
 
         if self._acknowledged_at is None:
             self._acknowledged_at = at
+
+        self._status = AssignmentStatus.IN_PROGRESS
+        self._responsible_agent_id=agent_id
+        self._disable_all_claims()
+
 
         self._touch(at)
 
@@ -313,3 +323,21 @@ class AssignmentAggregate(AggregrateRoot[str]):
 
         self._disable_all_claims()
         self._touch(at)
+
+    def can_be_claimed_by(self, agent_id: str) -> bool:
+
+        if self._status != AssignmentStatus.PENDING:
+            return False
+
+        if self._responsible_agent_id is not None:
+            return False
+
+        for team in self._team_recipients:
+            for agent in team.agents:
+                if agent.agent_id == agent_id:
+                    return (
+                        agent.can_claim
+                        and agent.claimed_at is None
+                    )
+
+        return False

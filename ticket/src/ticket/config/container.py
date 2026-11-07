@@ -21,9 +21,11 @@ from ticket.infrastructure.identity.date_time_provider import DateTimeProvider
 from ticket.infrastructure.identity.id_generator import IIdGenerator, IdGenerator
 from ticket.infrastructure.identity.jwt_generator import JWTGenerator
 from ticket.infrastructure.messaging.producer import KafkaProducer
+from ticket.infrastructure.workers.outbox_worker import OutboxWorker
 
 
 from ticket.infrastructure.clients.origanization_client import OrganizationClient
+from ticket.infrastructure.workers.sla_worker import SLABreachWorker
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -54,12 +56,15 @@ class Container(containers.DeclarativeContainer):
 
     ticket_repository = providers.Factory(
         TicketRepository,
-        session=session
+        session=session,
+        datetime_provider=datetime_provider
+
     )
 
     assignment_repository = providers.Factory(
         AssignmentRepository,
-        session=session
+        session=session,
+        datetime_provider=datetime_provider
     )
     processed_event_repository = providers.Factory(
         ProcessedEventRepository,
@@ -90,6 +95,7 @@ class Container(containers.DeclarativeContainer):
         assignment_repository=assignment_repository,
         ticket_repository=ticket_repository,
         round_robin_repository=round_robin_repository,
+        outbox_repository=outbox_repository,
         organization_client=organization_client,
         id_generator=id_generator,
         datetime_provider=datetime_provider,
@@ -99,8 +105,25 @@ class Container(containers.DeclarativeContainer):
     dispatcher = providers.Factory(
         Dispatcher,
         processed_event_repository=processed_event_repository,
-        assignment_repository=assignment_repository,
+        assignment_service=assignment_service,
         datetime_provider=datetime_provider
+    )
+
+    outbox_worker = providers.Factory(
+        OutboxWorker,
+        producer=producer,
+        outbox_repository=outbox_repository,
+        datetime_provider=datetime_provider,
+        unit_of_work=unit_of_work
+    )
+
+    sla_worker = providers.Factory(
+        SLABreachWorker,
+        assignment_repository=assignment_repository,
+        outbox_repository=outbox_repository,
+        id_generator=id_generator,
+        datetime_provider=datetime_provider,
+        unit_of_work=unit_of_work
     )
 
 container = Container()

@@ -180,3 +180,4 @@ class TicketAggregrate(AggregrateRoot[str]):
 
     def _touch(self) -> None:
         self._updated_at = datetime.now(timezone.utc)
+

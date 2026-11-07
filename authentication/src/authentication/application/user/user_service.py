@@ -1,6 +1,7 @@
 from sqlalchemy import update
 from sqlalchemy.sql.functions import mode
 
+from authentication.application.dto.user_query_dto import UserQueryDTO
 from authentication.application.dto.user_response_dto import UserResponseDTO
 from authentication.application.dto.create_staff_dto import CreateStaffDTO
 from authentication.application.events.user_created_event import UserCreatedEvent
@@ -8,6 +9,7 @@ from authentication.application.interfaces.otp_repository_interface import IOTPR
 from authentication.application.interfaces.outbox_repository_interface import IOutboxRepository
 from authentication.application.shared.datetime_provider_interface import IDateTimeProvider
 from authentication.application.shared.otp_generator_interface import IOTPGenerator
+from authentication.application.shared.pagination_response import PaginatedResponse
 from authentication.application.shared.unit_of_work_interface import IUnitOfWork
 from authentication.application.user.user_service_interface import IUserService
 from authentication.application.exceptions.user_exception import UserNotFound, UserAlreadyExists
@@ -52,14 +54,19 @@ class UserService(IUserService):
 
         return self._to_response(user)
 
-    async def get_all(self) -> list[UserResponseDTO]:
+    async def get_all(self, query : UserQueryDTO) -> PaginatedResponse[UserResponseDTO]:
 
-        users = await self.user_repository.get_all()
+        users = await self.user_repository.get_all(query=query)
 
-        return [
-            self._to_response(user)
-            for user in users
-        ]
+        return PaginatedResponse(
+            items=[
+                self._to_response(user)
+                for user in users.items
+            ],
+            total=users.total,
+            page=users.page,
+            limit=users.limit
+        )
 
     async def create_staff(self, payload: CreateStaffDTO) -> UserResponseDTO:
 

@@ -52,3 +52,20 @@ class TicketMapper:
             _updated_at=model.updated_at,
             _resolved_at=model.resolved_at,
         )
+
+    @staticmethod
+    def to_domain_without_activities(model: Ticket) -> TicketAggregrate:
+        return TicketAggregrate(
+            _id=model.id,
+            _title=model.title,
+            _description=model.description,
+            _category_id=model.category_id,
+            _created_by=model.created_by,
+            _priority=TicketPriority.from_string(model.priority),
+            _status=TicketStatus.from_string(model.status),
+            _current_assignment_id=model.current_assignment_id,
+            _activities=[],
+            _created_at=model.created_at,
+            _updated_at=model.updated_at,
+            _resolved_at=model.resolved_at,
+        )

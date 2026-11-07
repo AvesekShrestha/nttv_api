@@ -1,12 +1,15 @@
+from authentication.application.dto.team_query_dto import TeamQueryDTO
+from authentication.application.dto.user_response_dto import UserResponseDTO
 from authentication.application.exceptions.category_exception import CategoryDoesNotExists
 from authentication.application.exceptions.team_exception import TeamNotFound
-from authentication.application.exceptions.user_exception import UserNotFound
+from authentication.application.exceptions.user_exception import InvalidRequest, OnlyAgents, UserNotFound
 from authentication.application.interfaces.category_repository_interface import ICategoryRepository
 from authentication.application.interfaces.team_repository_interface import ITeamRepository
 
 from authentication.application.dto.team_dto import TeamDetailResponseDTO, TeamResponseDTO, TeamCreateDTO, TeamUpdateDTO, TeamMemberResponseDTO
 from authentication.application.interfaces.user_repository_interface import IUserRepository
 from authentication.application.shared.id_generator_interface import IIdGenerator
+from authentication.application.shared.pagination_response import PaginatedResponse
 from authentication.application.shared.unit_of_work_interface import IUnitOfWork
 from authentication.application.team.team_service_interface import ITeamService
 
@@ -46,14 +49,19 @@ class TeamService(ITeamService):
 
     async def get_all(
         self,
-    ) -> list[TeamDetailResponseDTO]:
+        query : TeamQueryDTO
+    ) -> PaginatedResponse[TeamDetailResponseDTO] :
+        teams = await self.team_repository.get_all(query=query)
 
-        teams = await self.team_repository.get_all()
-
-        return [
-            self._to_detail_response(team)
-            for team in teams
-        ]
+        return PaginatedResponse(
+            items=[
+                self._to_detail_response(team)
+                for team in teams.items
+            ],
+            total=teams.total,
+            page=teams.page,
+            limit=teams.limit
+        )
 
     async def create(
         self,
@@ -84,13 +92,19 @@ class TeamService(ITeamService):
         if not exists: 
             raise UserNotFound(f"User with id : {user_id} doesnot exists")
 
+        if exists.role != "AGENT" :
+            raise OnlyAgents("user is not agent")
+
+        team : TeamAggregate | None = await self.team_repository.get_by_id(team_id=team_id)
+        if not team : raise TeamNotFound("Team doesn't exists")
+
+        if exists.level != team.level: 
+            raise InvalidRequest("user level doesn't match with team level")
+
         member : TeamMember = TeamMember(
             _id=self.id_generator.generate_team_member_id(),
             _user_id=user_id
         )
-
-        team : TeamAggregate | None = await self.team_repository.get_by_id(team_id=team_id)
-        if not team : raise TeamNotFound("Team doesn't exists")
    
         team.add_member(member=member)
 
@@ -100,6 +114,11 @@ class TeamService(ITeamService):
         return self._to_detail_response(team)
 
     async def remove_team_member(self, team_id: str, user_id: str) -> TeamDetailResponseDTO:
+
+        exists = await self.user_repository.get_by_id(user_id=user_id)
+        if not exists: 
+            raise UserNotFound(f"User with id : {user_id} doesnot exists")
+
 
         team : TeamAggregate | None = await self.team_repository.get_by_id(team_id=team_id)
         if not team : raise TeamNotFound("Team doesn't exists")
@@ -161,6 +180,18 @@ class TeamService(ITeamService):
 
         await self.unit_of_work.commit()
         return True
+
+    async def get_by_ids(
+        self,
+        team_ids: list[str],
+    ) -> list[TeamDetailResponseDTO]:
+
+        teams = await self.team_repository.get_by_ids(team_ids)
+
+        return [
+            self._to_detail_response(team)
+            for team in teams
+        ]
 
     @staticmethod
     def _to_response(
