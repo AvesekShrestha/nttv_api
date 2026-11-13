@@ -193,10 +193,8 @@ class AssignmentService(IAssignmentService):
             assignment_type=assignment_type,
             assigned_at=now,
             assigned_by=actor_id,
-            acknowledgment_deadline_at=now + timedelta(hours=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS),
-            resolution_deadline_at=now + timedelta(hours=settings.RESOLUTION_DEADLINE_IN_HOURS),
-        )
-
+            acknowledgment_deadline_at=now + timedelta(minutes=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS),
+            resolution_deadline_at=now + timedelta(minutes=settings.RESOLUTION_DEADLINE_IN_HOURS))
         for team_data in request.teams:
 
             team_recipient_id = self.id_generator.generate_team_recipient_id()
@@ -232,17 +230,11 @@ class AssignmentService(IAssignmentService):
         )
 
         activity_id : str = self.id_generator.generate_ticket_activities_id()
-        activity = TicketActivityEntity.create(
-            id=actor_id,
-            ticket_id=ticket_id,
+        ticket.record_activity(
+            activity_id=activity_id,
             activity_type=activity_type,
             actor_id=actor_id,
-            created_at=now,
-        )
-        ticket.record_activity(
-            activity_id=actor_id,
-            activity_type=activity_type,
-            actor_id=actor_id
+            created_at=now
         )
 
         event_data : TicketForwardedEvent = TicketForwardedEvent(
@@ -395,12 +387,12 @@ class AssignmentService(IAssignmentService):
             assigned_by=None,
             acknowledgment_deadline_at=(
                 now + timedelta(
-                    hours=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS
+                    minutes=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS
                 )
             ),
             resolution_deadline_at=(
                 now + timedelta(
-                    hours=settings.RESOLUTION_DEADLINE_IN_HOURS
+                    minutes=settings.RESOLUTION_DEADLINE_IN_HOURS
                 )
             ),
             primary_agent_id=primary_agent_id,
@@ -448,6 +440,7 @@ class AssignmentService(IAssignmentService):
             ),
             activity_type=TicketActivityType.DISPATCHED,
             actor_id=None,
+            created_at=now
         )
 
         ticket.dispatch(

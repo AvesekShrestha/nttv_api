@@ -152,9 +152,6 @@ class TeamService(ITeamService):
         if payload.category_id:
             team.change_category(payload.category_id)
 
-        if payload.level :
-            team.change_level(payload.level)
-
         team = await self.team_repository.update(
             aggregate=team,
         )

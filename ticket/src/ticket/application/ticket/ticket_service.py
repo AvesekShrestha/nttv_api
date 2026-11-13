@@ -1,5 +1,6 @@
 from sqlalchemy import event
-from sqlalchemy.sql.functions import user
+from sqlalchemy.engine import create
+from sqlalchemy.sql.functions import now, user
 
 from ticket.application.events.kafka_event import KafkaEvent
 from ticket.application.events.ticket_acknowledge_event import TicketAcknowledgeEvent
@@ -7,7 +8,7 @@ from ticket.application.events.ticket_completed_event import TicketCompletedEven
 from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.application.ticket.dto.activity_response_dto import TicketActivityResponseDTO
 from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
-from ticket.domain.assignment.exceptions.assignment_exception import AssignmentNotFound
+from ticket.domain.assignment.exceptions.assignment_exception import AlreadyAcknowledged, AssignmentNotFound, IneligibleRecipient
 from ticket.domain.outbox.entity.outbox_event_entity import OutboxEvent
 from ticket.domain.ticket.entity.ticket_activity_entity import TicketActivityEntity
 from ticket.domain.ticket.ticket_activity_type import TicketActivityType
@@ -78,11 +79,14 @@ class TicketService(ITicketService) :
 
     async def create(self, payload : TicketCreateDTO, user_id : str) -> TicketResponseDTO:
 
+        now = self.datetime_provider.now()
+
         ticket_id = self.id_generator.generate_ticket_id()
         ticket = TicketAggregrate.create(
             id=ticket_id,
             title=payload.title,
             description=payload.description,
+            priority=TicketPriority.from_string(payload.priority),
             category_id=payload.category_id,
             created_by=user_id
         )
@@ -91,7 +95,8 @@ class TicketService(ITicketService) :
         ticket.record_activity(
             activity_id=ticket_activity_id,
             activity_type=TicketActivityType.CREATED,
-            actor_id=user_id
+            actor_id=user_id,
+            created_at=now
         )
 
         await self.ticket_repository.add(ticket)
@@ -127,6 +132,9 @@ class TicketService(ITicketService) :
         assignment = await self.assignment_repository.get_by_id(assignment_id=ticket.get_current_assignment_id())
         if assignment is None : raise AssignmentNotFound(f"Assignment not founnd")
 
+        if assignment.acknowledged_at is not None : 
+            raise AlreadyAcknowledged(f"Ticket with id : {ticket.id} has already been acknowledged")
+
         assignment.acknowledge(
             agent_id=user_id,
             at=now
@@ -135,18 +143,12 @@ class TicketService(ITicketService) :
         ticket.acknowldege()
 
         activity_id : str = self.id_generator.generate_ticket_activities_id()
-        activtity = TicketActivityEntity.create(
-            id=activity_id,
-            ticket_id=ticket_id,
-            activity_type=TicketActivityType.ACKNOWLEDGE,
-            actor_id=user_id,
-            created_at=now
-        )
 
         ticket.record_activity(
             activity_id=activity_id,
             activity_type=TicketActivityType.ACKNOWLEDGE,
-            actor_id=user_id
+            actor_id=user_id,
+            created_at=now
         )
 
         await self.ticket_repository.update(ticket)
@@ -181,23 +183,20 @@ class TicketService(ITicketService) :
         assignment = await self.assignment_repository.get_by_id(assignment_id=ticket.get_current_assignment_id())
         if assignment is None : raise AssignmentNotFound(f"Assignment not founnd")
 
+        if assignment.responsible_agent_id != user_id : 
+            raise IneligibleRecipient("You don't have ticket access")
+
         assignment.mark_completed(at=now)
 
         ticket.complete(at=now)
 
         activity_id : str = self.id_generator.generate_ticket_activities_id()
-        activtity = TicketActivityEntity.create(
-            id=activity_id,
-            ticket_id=ticket_id,
-            activity_type=TicketActivityType.COMPLETED,
-            actor_id=user_id,
-            created_at=now
-        )
 
         ticket.record_activity(
             activity_id=activity_id,
             activity_type=TicketActivityType.COMPLETED,
-            actor_id=user_id
+            actor_id=user_id,
+            created_at=now
         )
 
         await self.ticket_repository.update(ticket)

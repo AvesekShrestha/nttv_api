@@ -329,9 +329,6 @@ class AssignmentAggregate(AggregrateRoot[str]):
         if self._status != AssignmentStatus.PENDING:
             return False
 
-        if self._responsible_agent_id is not None:
-            return False
-
         for team in self._team_recipients:
             for agent in team.agents:
                 if agent.agent_id == agent_id:

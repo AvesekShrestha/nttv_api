@@ -29,7 +29,7 @@ async def get_all(query : Annotated[TeamQueryDTO, Query()], session : AsyncSessi
     return result
 
 @router.get("/{team_id}", response_model=TeamDetailResponseDTO)
-async def get_by_id(team_id: str, session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)):
+async def get_by_id(team_id: str, session : AsyncSession = Depends(get_session)):
 
     container.session.override(session)
     team_service = container.team_service()

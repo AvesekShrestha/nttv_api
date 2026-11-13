@@ -15,6 +15,7 @@ from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
 
 from ticket.api.rest_api.v1.dependencies.authentication import get_current_user
+from ticket.api.rest_api.v1.dependencies.authorization import require_roles
 
 from ticket.config.container import container
 
@@ -60,7 +61,7 @@ async def delete(ticket_id : str, session : AsyncSession = Depends(get_session),
     return result
 
 @router.post("/{ticket_id}/acknowldege", response_model=TicketResponseDTO)
-async def acknowldege(ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user))-> TicketResponseDTO:
+async def acknowldege(ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user), _ = Depends(require_roles("agent")))-> TicketResponseDTO:
 
     container.session.override(session)
     ticket_service : ITicketService = container.ticket_service()
@@ -78,7 +79,7 @@ async def complete(ticket_id : str, session : AsyncSession = Depends(get_session
     return result
 
 @router.post("/{ticket_id}/forward", response_model=AssignmentResponseDTO)
-async def forward(payload : ReassignmentDTO, ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user)) -> AssignmentResponseDTO : 
+async def forward(payload : ReassignmentDTO, ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user), _ = Depends(require_roles("agent"))) -> AssignmentResponseDTO : 
 
     container.session.override(session)
     assignment_service : IAssignmentService = container.assignment_service()
@@ -87,7 +88,7 @@ async def forward(payload : ReassignmentDTO, ticket_id : str, session : AsyncSes
     return result
 
 @router.post("/{ticket_id}/escalate", response_model=AssignmentResponseDTO)
-async def escalate(payload : ReassignmentDTO, ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user)) -> AssignmentResponseDTO : 
+async def escalate(payload : ReassignmentDTO, ticket_id : str, session : AsyncSession = Depends(get_session), user : JWTPayload = Depends(get_current_user), _ = Depends(require_roles("agent"))) -> AssignmentResponseDTO : 
 
     container.session.override(session)
     assignment_service : IAssignmentService = container.assignment_service()

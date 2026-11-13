@@ -45,7 +45,7 @@ class OrganizationClient(IOrganizationClient):
         try:
             response = await self.http_client.get(
                 "/api/v1/team/",
-                params={"category_id": category_id},
+                params={"category_id": category_id, "level" : "L1"},
             )
 
             response.raise_for_status()
