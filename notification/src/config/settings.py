@@ -25,6 +25,23 @@ class Settings(BaseSettings):
     kafka_max_retries: int = 3
     kafka_retry_delay_seconds: float = 5.0
     delivery_worker_interval: int = 60
+    ticket_service_url: str = Field(
+        validation_alias="TICKET_SERVICE_URL",
+    )
+    ticket_api_timeout_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        validation_alias="TICKET_API_TIMEOUT_SECONDS",
+    )
+    authentication_service_url: str = Field(
+        validation_alias="AUTHENTICATION_SERVICE_URL",
+    )
+
+    authentication_api_timeout_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        validation_alias="AUTHENTICATION_API_TIMEOUT_SECONDS",
+    )
 
 
 settings = Settings() # type: ignore[call-arg]

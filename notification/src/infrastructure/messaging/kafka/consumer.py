@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+import httpx
 from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 
 from src.config.settings import settings
@@ -56,6 +57,7 @@ async def consume_events(
                 raise KafkaException(error)
 
             logger.error("Kafka consumer error: %s", error)
+
             await asyncio.sleep(retry_policy.delay_seconds)
             continue
 
@@ -85,18 +87,23 @@ async def consume_notification_events() -> None:
         producer = create_dead_letter_producer()
 
         try:
-            router = create_event_router(
-                ticket_topic=settings.kafka_ticket_topic,
-                auth_topic=settings.kafka_auth_topic,
-            )
+            async with httpx.AsyncClient(
+                base_url=settings.ticket_service_url,
+                timeout=settings.ticket_api_timeout_seconds,
+            ) as ticket_http_client:
+                router = create_event_router(
+                    ticket_topic=settings.kafka_ticket_topic,
+                    auth_topic=settings.kafka_auth_topic,
+                    ticket_http_client=ticket_http_client,
+                )
 
-            await consume_events(
-                consumer=consumer,
-                producer=producer,
-                router=router,
-                topics=topics,
-                retry_policy=retry_policy,
-            )
+                await consume_events(
+                    consumer=consumer,
+                    producer=producer,
+                    router=router,
+                    topics=topics,
+                    retry_policy=retry_policy,
+                )
 
         finally:
             remaining = await asyncio.to_thread(

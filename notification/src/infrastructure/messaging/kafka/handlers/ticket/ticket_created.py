@@ -1,34 +1,58 @@
+import logging
+from typing import Any
 
+import httpx
+
+from src.application.notification.notify_ticket_created import (
+    NotifyTicketCreated,
+)
+from src.infrastructure.clients.ticket_client import TicketClient
+from src.infrastructure.identity.id_generator import IdGenerator
 from src.infrastructure.messaging.kafka.events.ticket.ticket_created_event import (
     TicketCreatedEvent,
 )
-from src.infrastructure.messaging.kafka.handlers.ticket.shared import (
-    process_notifications,
+from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
+from src.infrastructure.persistence.sqlalchemy.repositories.inbox_repository import (
+    InboxRepository,
 )
 
-
-def build_message(event: TicketCreatedEvent) -> str:
-    return (
-        "A new ticket has been created.\n\n"
-        f"Ticket ID: {event.subject.id}\n"
-        f"Title: {event.data.title}\n"
-        f"Category: {event.data.category}\n"
-        f"Priority: {event.data.priority}\n"
-        f"Support level: {event.data.level}\n"
-        f"Created at: {event.occurred_at.isoformat()}"
-    )
+logger = logging.getLogger(__name__)
 
 
-async def handle(payload: dict[str, object]) -> None:
-    event = TicketCreatedEvent.model_validate(payload)
+class TicketCreatedHandler:
+    def __init__(
+        self,
+        *,
+        http_client: httpx.AsyncClient,
+        source_topic: str,
+    ):
+        self.ticket_client = TicketClient(http_client)
+        self.source_topic = source_topic
 
-    await process_notifications(
-        event_id=event.event_id,
-        event_type=event.event_type,
-        recipients=[
-            str(recipient.email)
-            for recipient in event.data.recipients
-        ],
-        subject=f"[New Ticket] {event.data.title}",
-        message=build_message(event),
-   )
+    async def __call__(self, payload: dict[str, Any]) -> None:
+        event = TicketCreatedEvent.model_validate(payload)
+
+        async with SessionLocal() as session:
+            repository = InboxRepository(
+                session=session,
+                id_generator=IdGenerator(),
+            )
+
+            use_case = NotifyTicketCreated(
+                ticket_client=self.ticket_client,
+                inbox_repository=repository,
+            )
+
+            saved = await use_case.execute(
+                event_id=event.id,
+                occurred_at=event.occurred_at,
+                ticket_id=event.data.ticket_id,
+                source_topic=self.source_topic,
+            )
+
+        logger.info(
+            "Ticket creation %s: event_id=%s topic=%s",
+            "saved" if saved else "already processed",
+            event.id,
+            self.source_topic,
+        )

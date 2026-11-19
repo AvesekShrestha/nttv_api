@@ -1,7 +1,21 @@
 from typing import Literal
 
-from src.infrastructure.messaging.kafka.events.ticket.base import TicketEvent
+from pydantic import AwareDatetime, Field
+
+from src.infrastructure.messaging.kafka.events.ticket.base import (
+    EventModel,
+)
 
 
-class TicketAcknowledgeEvent(TicketEvent):
-    event_type: Literal["ticket_acknowledge"]
+class TicketAcknowledgeData(EventModel):
+    ticket_id: str = Field(min_length=1)
+    user_id: str = Field(min_length=1)
+
+
+class TicketAcknowledgeEvent(EventModel):
+    id: str = Field(min_length=1)
+    key: str = Field(min_length=1)
+    event_type: Literal["ticket.acknowledged"]
+    occurred_at: AwareDatetime
+    data: TicketAcknowledgeData
+    published_at: AwareDatetime | None = None

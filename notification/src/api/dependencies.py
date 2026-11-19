@@ -1,27 +1,37 @@
-from collections.abc import AsyncGenerator
-
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.application.delivery.delivery_service import DeliveryService
+from src.application.delivery.delivery_service_interface import (
+    DeliveryServiceInterface,
+)
+from src.application.interfaces.inbox_access_repository_interface import (
+    InboxAccessRepositoryInterface,
+)
 from src.application.interfaces.notification_repository_interface import (
     NotificationRepositoryInterface,
 )
 from src.application.notification.create_notification import CreateNotification
 from src.application.notification.get_notification import GetNotification
+from src.application.shared.email_sender_interface import EmailSenderInterface
 from src.application.shared.id_generator_interface import IIdGenerator
+from src.config.settings import settings
 from src.infrastructure.identity.id_generator import IdGenerator
-from src.infrastructure.persistence.sqlalchemy.database import (
-    get_db,
+from src.infrastructure.persistence.sqlalchemy.database import get_db
+from src.infrastructure.persistence.sqlalchemy.repositories.inbox_access_repository import (
+    InboxAccessRepository,
 )
 from src.infrastructure.persistence.sqlalchemy.repositories.notification_repository import (
     NotificationRepository,
 )
-
-from src.config.settings import settings
-from src.application.delivery.delivery_service import DeliveryService
-from src.application.delivery.delivery_service_interface import DeliveryServiceInterface
-from src.application.shared.email_sender_interface import EmailSenderInterface
 from src.infrastructure.providers.smtp.smtp_email_sender import SmtpEmailSender
+
+
+def get_inbox_access_repository(
+    session: AsyncSession = Depends(get_db),
+) -> InboxAccessRepositoryInterface:
+    return InboxAccessRepository(session)
+
 
 async def get_notification_repository(
     session: AsyncSession = Depends(get_db),
@@ -32,8 +42,10 @@ async def get_notification_repository(
 def get_id_generator() -> IIdGenerator:
     return IdGenerator()
 
+
 def get_email_sender() -> EmailSenderInterface:
     return SmtpEmailSender(settings)
+
 
 def get_delivery_service(
     repository: NotificationRepositoryInterface = Depends(
@@ -41,7 +53,11 @@ def get_delivery_service(
     ),
     email_sender: EmailSenderInterface = Depends(get_email_sender),
 ) -> DeliveryServiceInterface:
-    return DeliveryService(repository=repository, email_sender=email_sender)
+    return DeliveryService(
+        repository=repository,
+        email_sender=email_sender,
+    )
+
 
 def get_create_notification_use_case(
     repository: NotificationRepositoryInterface = Depends(
@@ -65,7 +81,3 @@ def get_get_notification_use_case(
     ),
 ) -> GetNotification:
     return GetNotification(repository=repository)
-
-
-
-
