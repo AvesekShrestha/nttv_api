@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,6 +41,21 @@ class Settings(BaseSettings):
         default=10.0,
         gt=0,
         validation_alias="AUTHENTICATION_API_TIMEOUT_SECONDS",
+    )
+
+    delivery_worker_email: str = Field(
+        default="",
+        alias="DELIVERY_WORKER_EMAIL",
+    )
+    
+    delivery_worker_password: SecretStr = Field(
+        default=SecretStr(""),
+        alias="DELIVERY_WORKER_PASSWORD",
+    )
+
+    cors_allowed_origins: list[str] = Field(
+    default_factory=lambda: ["http://localhost:5173"],
+    validation_alias="CORS_ALLOWED_ORIGINS",
     )
 
 

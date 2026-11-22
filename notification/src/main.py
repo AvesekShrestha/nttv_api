@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 
 import httpx
 from fastapi import FastAPI
@@ -54,6 +55,14 @@ app = FastAPI(
     title="NTC Notification Service",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(

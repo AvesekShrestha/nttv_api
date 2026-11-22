@@ -15,6 +15,7 @@ from src.api.authentication import authenticate_access_token
 from src.infrastructure.realtime.connection_manager import (
     ConnectionManager,
 )
+from src.config.settings import settings
 
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,15 @@ async def notification_websocket(websocket: WebSocket):
         websocket.app.state.connection_manager
     )
     recheck_task: asyncio.Task | None = None
+
+    origin = websocket.headers.get("origin")
+
+    if (
+        origin is not None
+        and origin not in settings.cors_allowed_origins
+    ):
+        await websocket.close(code=1008)
+        return
 
     await websocket.accept()
 

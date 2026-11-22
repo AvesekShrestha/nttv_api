@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 from src.application.exceptions.delivery_exception import (
@@ -26,7 +27,7 @@ class SmtpEmailSender(EmailSenderInterface):
 
     def _send_sync(self, to: str, subject: str, body: str) -> None:
         message = EmailMessage()
-        message["From"] = self._settings.smtp_email
+        message["From"] = self._settings.default_from_email
         message["To"] = to
         message["Subject"] = subject
         message.set_content(body)
@@ -42,7 +43,8 @@ class SmtpEmailSender(EmailSenderInterface):
                 self._settings.smtp_port,
                 timeout=10,
             ) as smtp:
-                smtp.starttls()
+                if self._settings.email_use_tls:
+                    smtp.starttls(context=ssl.create_default_context())
                 smtp.login(
                     self._settings.smtp_email,
                     self._settings.smtp_password,

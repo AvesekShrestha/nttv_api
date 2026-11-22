@@ -48,3 +48,4 @@ Thumbs.db
 
 # Alembic
 # Keep migration files tracked; ignore generated local DB files if any
+*.runtime/
