@@ -7,7 +7,21 @@ authors = [
     { name = "Avesek", email = "avesekxthaa@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "confluent-kafka>=2.16.1",
+    "dependency-injector>=4.49.1",
+    "fastapi>=0.163.0",
+    "psycopg>=3.3.9",
+    "psycopg-binary>=3.3.9",
+    "psycopg2-binary>=2.9.13",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.3",
+    "python-dotenv>=1.2.4",
+    "sqlalchemy[asyncio]>=2.1.8",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 analytics = "analytics:main"

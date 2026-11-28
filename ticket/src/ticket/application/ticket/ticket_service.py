@@ -3,7 +3,7 @@ from sqlalchemy.engine import create
 from sqlalchemy.sql.functions import now, user
 
 from ticket.application.events.kafka_event import KafkaEvent
-from ticket.application.events.ticket_acknowledge_event import TicketAcknowledgeEvent
+from ticket.application.events.ticket_acknowledge_event import TicketAcknowledgedEvent
 from ticket.application.events.ticket_completed_event import TicketCompletedEvent
 from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.application.ticket.dto.activity_response_dto import TicketActivityResponseDTO
@@ -102,7 +102,10 @@ class TicketService(ITicketService) :
         await self.ticket_repository.add(ticket)
 
         event_data : TicketCreatedEvent = TicketCreatedEvent(
-            ticket_id=ticket_id
+            ticket_id=ticket_id,
+            category_id=payload.category_id,
+            priority=payload.priority,
+            created_by=user_id
         )
         event =  OutboxEvent.create(
             key=user_id,
@@ -154,9 +157,14 @@ class TicketService(ITicketService) :
         await self.ticket_repository.update(ticket)
         await self.assignment_repository.update(aggregate=assignment)
 
-        event_data : TicketAcknowledgeEvent = TicketAcknowledgeEvent(
+        event_data : TicketAcknowledgedEvent = TicketAcknowledgedEvent(
             ticket_id=ticket_id,
-            user_id=user_id
+            assignment_id=assignment.id,
+            actor_id=user_id,
+            agent_id=user_id,
+            team_id=assignment.responsible_team_id,
+            assigned_at= assignment.assigned_at if assignment.assigned_at is not None else now,
+            acknowledgment_sla_deadline=assignment.acknowledgment_deadline_at if assignment.acknowledgment_deadline_at else now
         )
 
         event_id = self.id_generator.generate_event_id()
@@ -203,7 +211,11 @@ class TicketService(ITicketService) :
 
         event_data : TicketCompletedEvent = TicketCompletedEvent(
             ticket_id=ticket_id,
-            user_id=user_id
+            assignment_id=assignment.id,
+            actor_id=user_id,
+            agent_id=user_id,
+            team_id=assignment.responsible_team_id,
+            resolution_sla_deadline=assignment.resolution_deadline_at
         )
 
         event_id = self.id_generator.generate_event_id()

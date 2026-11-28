@@ -3,14 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from authentication.api.rest_api import router
 
-from authentication.api.rest_api.v1.middlewares.exception_handler_middleware import ErrorHandlerMiddleware
-from authentication.api.rest_api.v1.middlewares.jwt_authentication_middleware import JWTAuthenticationMiddleware
+from authentication.api.rest_api.v1.middlewares.exception_handler_middleware import (
+    ErrorHandlerMiddleware,
+)
+from authentication.api.rest_api.v1.middlewares.jwt_authentication_middleware import (
+    JWTAuthenticationMiddleware,
+)
 
 from authentication.config.container import container
 
 app = FastAPI()
 
 app.include_router(router, prefix="/api")
+
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "authentication-service",
+    }
+
 
 app.add_middleware(
     JWTAuthenticationMiddleware,

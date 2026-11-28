@@ -79,8 +79,12 @@ class SLABreachWorker:
                 assignment.mark_acknowledgment_sla_breached(now)
 
                 event_data : SLABreachedEvent = SLABreachedEvent(
+                    ticket_id=assignment.ticket_id,
                     assignment_id=assignment.id,
-                    ticket_id=assignment.ticket_id
+                    sla_type="ACKNOWLEDGMENT",
+                    agent_id=assignment.responsible_agent_id,
+                    team_id=assignment.responsible_team_id,
+                    deadline_at=assignment.acknowledgment_deadline_at
                 )
 
                 event_id : str = self.id_generator.generate_event_id()
@@ -124,8 +128,12 @@ class SLABreachWorker:
                 assignment.mark_resolution_sla_breached(now)
 
                 event_data : SLABreachedEvent = SLABreachedEvent(
+                    ticket_id=assignment.ticket_id,
                     assignment_id=assignment.id,
-                    ticket_id=assignment.ticket_id
+                    sla_type="RESOLUTION",
+                    agent_id=assignment.responsible_agent_id,
+                    team_id=assignment.responsible_team_id,
+                    deadline_at=assignment.resolution_deadline_at
                 )
 
                 event_id : str = self.id_generator.generate_event_id()

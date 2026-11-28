@@ -34,6 +34,7 @@ class AssignmentResponseDTO:
 
     primary_agent_id: str | None
     responsible_agent_id: str | None
+    responsible_team_id: str | None
 
     team_recipients: list[TeamRecipientResponseDTO]
 

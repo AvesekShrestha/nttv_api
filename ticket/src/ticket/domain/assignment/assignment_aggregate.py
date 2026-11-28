@@ -2,15 +2,28 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ticket.application.assignment.exceptions.index import AgentNotFound
-from ticket.domain.assignment.exceptions.agent_exceptions import AgentAlreadyExists, AlreadyClaimed, NotAvailableToClaim
-from ticket.domain.assignment.exceptions.assignment_exception import AlreadyAcknowledged, AssignmentAlreadyStarted, AssignmentAlreadyTerminated, AssignmentIncompletable
-from ticket.domain.assignment.exceptions.team_recipient_exception import InvalidRequest, TeamAlreadyExists
+from ticket.domain.assignment.exceptions.agent_exceptions import (
+    AgentAlreadyExists,
+    AlreadyClaimed,
+    NotAvailableToClaim,
+)
+from ticket.domain.assignment.exceptions.assignment_exception import (
+    AlreadyAcknowledged,
+    AssignmentAlreadyStarted,
+    AssignmentAlreadyTerminated,
+    AssignmentIncompletable,
+)
+from ticket.domain.assignment.exceptions.team_recipient_exception import (
+    InvalidRequest,
+    TeamAlreadyExists,
+)
 from ticket.domain.shared.aggregate import AggregrateRoot
 from ticket.domain.assignment.assignment_type import AssignmentType
 from ticket.domain.assignment.assignment_status import AssignmentStatus
 from ticket.domain.assignment.entity.team_recipient_entity import (
     TeamRecipientEntity,
 )
+
 
 @dataclass
 class AssignmentAggregate(AggregrateRoot[str]):
@@ -20,10 +33,9 @@ class AssignmentAggregate(AggregrateRoot[str]):
     _status: AssignmentStatus = AssignmentStatus.PENDING
     _primary_agent_id: str | None = None
     _responsible_agent_id: str | None = None
+    _responsible_team_id: str | None = None
 
-    _team_recipients: list[TeamRecipientEntity] = field(
-        default_factory=list
-    )
+    _team_recipients: list[TeamRecipientEntity] = field(default_factory=list)
 
     _assigned_at: datetime | None = None
     _acknowledgment_deadline_at: datetime | None = None
@@ -61,6 +73,10 @@ class AssignmentAggregate(AggregrateRoot[str]):
     @property
     def responsible_agent_id(self) -> str | None:
         return self._responsible_agent_id
+
+    @property
+    def responsible_team_id(self) -> str | None:
+        return self._responsible_team_id
 
     @property
     def team_recipients(self) -> list[TeamRecipientEntity]:
@@ -112,7 +128,8 @@ class AssignmentAggregate(AggregrateRoot[str]):
         acknowledgment_deadline_at: datetime | None = None,
         resolution_deadline_at: datetime | None = None,
         primary_agent_id: str | None = None,
-        responsible_agent_id : str | None = None
+        responsible_agent_id: str | None = None,
+        responsible_team_id: str | None = None,
     ) -> AssignmentAggregate:
 
         return AssignmentAggregate(
@@ -122,6 +139,7 @@ class AssignmentAggregate(AggregrateRoot[str]):
             _assigned_by=assigned_by,
             _primary_agent_id=primary_agent_id,
             _responsible_agent_id=responsible_agent_id,
+            _responsible_team_id=responsible_team_id,
             _assigned_at=assigned_at,
             _acknowledgment_deadline_at=acknowledgment_deadline_at,
             _resolution_deadline_at=resolution_deadline_at,
@@ -153,7 +171,6 @@ class AssignmentAggregate(AggregrateRoot[str]):
             for agent in team.agents:
                 agent.disable_claiming()
 
-
     def _enable_all_claims(self) -> None:
         for team_recipient in self._team_recipients:
             for agent_recipient in team_recipient.agents:
@@ -164,30 +181,21 @@ class AssignmentAggregate(AggregrateRoot[str]):
         recipients: list[TeamRecipientEntity],
     ) -> None:
         if self._status != AssignmentStatus.PENDING:
-            raise InvalidRequest(
-                "Recipients can only be added to a pending assignment"
-            )
+            raise InvalidRequest("Recipients can only be added to a pending assignment")
 
-        existing_team_ids = {
-            team.team_id
-            for team in self._team_recipients
-        }
+        existing_team_ids = {team.team_id for team in self._team_recipients}
 
         incoming_team_ids = set()
 
         for recipient in recipients:
             if recipient.assignment_id != self.id:
-                raise InvalidRequest(
-                    "Team recipient belongs to a different assignment"
-                )
+                raise InvalidRequest("Team recipient belongs to a different assignment")
 
             if (
                 recipient.team_id in existing_team_ids
                 or recipient.team_id in incoming_team_ids
             ):
-                raise TeamAlreadyExists(
-                    "Team already added to this assignment"
-                )
+                raise TeamAlreadyExists("Team already added to this assignment")
 
             incoming_team_ids.add(recipient.team_id)
 
@@ -207,12 +215,12 @@ class AssignmentAggregate(AggregrateRoot[str]):
         agent = self._find_agent(agent_id)
 
         if agent is None:
-            raise AgentNotFound(
-                "Agent is not a recipient of this assignment"
-            )
+            raise AgentNotFound("Agent is not a recipient of this assignment")
 
         if agent.acknowledged_at is not None:
             raise AlreadyAcknowledged("Ticket already acknowledged")
+
+        team_id = self._find_team_id_for_agent(agent_id)
 
         agent.acknowledge(at)
         agent.mark_notified(at)
@@ -222,9 +230,9 @@ class AssignmentAggregate(AggregrateRoot[str]):
             self._acknowledged_at = at
 
         self._status = AssignmentStatus.IN_PROGRESS
-        self._responsible_agent_id=agent_id
+        self._responsible_agent_id = agent_id
+        self._responsible_team_id=team_id
         self._disable_all_claims()
-
 
         self._touch(at)
 
@@ -263,21 +271,15 @@ class AssignmentAggregate(AggregrateRoot[str]):
     ) -> None:
 
         if self._responsible_agent_id is not None:
-            raise AlreadyClaimed(
-                "ticket has been already claimed"
-            )
+            raise AlreadyClaimed("ticket has been already claimed")
 
         if self._status != AssignmentStatus.PENDING:
-            raise NotAvailableToClaim(
-                "Only pending assignments can be claimed"
-            )
+            raise NotAvailableToClaim("Only pending assignments can be claimed")
 
         agent = self._find_agent(agent_id)
 
         if agent is None:
-            raise AgentNotFound(
-                "Agent is not a recipient of this assignment"
-            )
+            raise AgentNotFound("Agent is not a recipient of this assignment")
 
         agent.claim(at)
 
@@ -332,9 +334,13 @@ class AssignmentAggregate(AggregrateRoot[str]):
         for team in self._team_recipients:
             for agent in team.agents:
                 if agent.agent_id == agent_id:
-                    return (
-                        agent.can_claim
-                        and agent.claimed_at is None
-                    )
+                    return agent.can_claim and agent.claimed_at is None
 
         return False
+
+    def _find_team_id_for_agent(self, agent_id: str) -> str | None:
+        for team in self._team_recipients:
+            if team.get_agent(agent_id) is not None:
+                return team.team_id
+
+        return None

@@ -23,6 +23,7 @@ class AssignmentMapper:
             status=aggregate.status.value,
             primary_agent_id=aggregate.primary_agent_id,
             responsible_agent_id=aggregate.responsible_agent_id,
+            responsible_team_id=aggregate.responsible_team_id,
             assigned_by=aggregate.assigned_by,
             assigned_at=aggregate.assigned_at,
             acknowledgment_deadline_at=aggregate.acknowledgment_deadline_at,
@@ -52,6 +53,7 @@ class AssignmentMapper:
             _status=AssignmentStatus.from_string(model.status),
             _primary_agent_id=model.primary_agent_id,
             _responsible_agent_id=model.responsible_agent_id,
+            _responsible_team_id=model.responsible_team_id,
             _assigned_by=model.assigned_by,
 
             _team_recipients=[
