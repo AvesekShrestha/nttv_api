@@ -106,7 +106,8 @@ class Container(containers.DeclarativeContainer):
         Dispatcher,
         processed_event_repository=processed_event_repository,
         assignment_service=assignment_service,
-        datetime_provider=datetime_provider
+        datetime_provider=datetime_provider,
+        unit_of_work=unit_of_work
     )
 
     outbox_worker = providers.Factory(

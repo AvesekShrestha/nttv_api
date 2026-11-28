@@ -32,7 +32,7 @@ async def me(user : JWTPayload = Depends(get_current_user), session : AsyncSessi
     return result
 
 @router.get("/{user_id}", response_model=UserResponseDTO)
-async def get_by_id(user_id : str, session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)):
+async def get_by_id(user_id : str, session : AsyncSession = Depends(get_session)):
     container.session.override(session)
     user_service = container.user_service()
 
@@ -40,7 +40,7 @@ async def get_by_id(user_id : str, session : AsyncSession = Depends(get_session)
     return result
 
 @router.get("/", response_model=PaginatedResponse[UserResponseDTO])
-async def get_all(query : Annotated[UserQueryDTO, Query()] ,session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)) : 
+async def get_all(query : Annotated[UserQueryDTO, Query()] ,session : AsyncSession = Depends(get_session)) : 
     container.session.override(session)
     user_service = container.user_service()
 

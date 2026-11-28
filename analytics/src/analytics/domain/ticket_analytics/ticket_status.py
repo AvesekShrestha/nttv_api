@@ -1,0 +1,13 @@
+from enum import StrEnum
+
+class TicketStatus(StrEnum):
+    NEW = "NEW"
+    ASSIGNED = "ASSIGNED"
+    INPROCESS = "INPROCESS"
+    FORWARDED = "FORWARDED"
+    ESCALATED = "ESCALATED"
+    COMPLETED = "COMPLETED"
+
+    @classmethod
+    def from_string(cls, value: str) -> TicketStatus:
+        return cls(value.strip().upper())

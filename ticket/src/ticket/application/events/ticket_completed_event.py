@@ -1,7 +1,16 @@
-from dataclasses import dataclass
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
+
 
 class TicketCompletedEvent(BaseModel):
-    ticket_id: str
-    user_id : str
+    model_config = ConfigDict(extra="forbid")
 
+    ticket_id: str
+    assignment_id: str
+
+    actor_id: str
+    agent_id: str
+    team_id: str | None
+
+    resolution_sla_deadline: datetime | None

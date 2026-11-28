@@ -1,3 +1,4 @@
+from fastapi import status
 from sqlalchemy import delete, func, select, and_, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -9,7 +10,9 @@ from ticket.application.shared.date_time_provider_interface import IDateTimeProv
 from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.application.ticket.dto import ticket_create_dto
 from ticket.application.ticket.dto.ticket_query_dto import TicketQueryDTO
+from ticket.application.ticket.ticket_service import TicketService
 from ticket.domain.ticket.ticket_aggregate import TicketAggregrate
+from ticket.domain.ticket.ticket_status import TicketStatus
 from ticket.infrastructure.persistence.sqlalchemy.mappers.ticket_mapper import (
     TicketMapper,
 )
@@ -88,6 +91,7 @@ class TicketRepository(ITicketRepository):
 
             elif query.assignment_role == "backup":
                 filters.append(backup_condition)
+                filters.append(Ticket.status != "COMPLETED")
 
             else:
                 filters.append(

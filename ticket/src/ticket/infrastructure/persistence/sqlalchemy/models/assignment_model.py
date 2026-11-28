@@ -49,6 +49,11 @@ class Assignment(Base):
         nullable=True
     )
 
+    responsible_team_id : Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True
+    )
+
     assigned_by: Mapped[str] = mapped_column(
         String(30),
         nullable=True,

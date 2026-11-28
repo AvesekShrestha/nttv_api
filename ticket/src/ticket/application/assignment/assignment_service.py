@@ -1,11 +1,14 @@
 from datetime import timedelta
+from logging import lastResort
 
-from sqlalchemy.sql.functions import now
+from sqlalchemy.orm.attributes import _unregister_attribute
 
 from ticket.application.assignment.dto.assignment_query_dto import AssignmentQueryDTO
-from ticket.application.assignment.dto.claim_eligibility_dto import ClaimEligibilityResponse
+from ticket.application.assignment.dto.claim_eligibility_dto import (
+    ClaimEligibilityResponse,
+)
 from ticket.application.events.ticket_dispatched_event import TicketDispatchedEvent
-from ticket.application.events.ticket_forwarded_event import TicketForwardedEvent
+from ticket.application.events.ticket_reassignment_event import TicketReassignmentEvent
 from ticket.application.interfaces.outbox_repository_interface import IOutboxRepository
 from ticket.application.shared.pagination_response_dto import PaginatedResponse
 from ticket.domain.assignment.assignment_aggregate import AssignmentAggregate
@@ -13,7 +16,11 @@ from ticket.domain.assignment.assignment_status import AssignmentStatus
 from ticket.domain.assignment.assignment_type import AssignmentType
 from ticket.domain.assignment.entity.agent_recipient_entity import AgentRecipientEntity
 from ticket.domain.assignment.entity.team_recipient_entity import TeamRecipientEntity
-from ticket.domain.assignment.exceptions.assignment_exception import AssignmentNotFound, IneligibleRecipient, InvalidReassignmentRequest
+from ticket.domain.assignment.exceptions.assignment_exception import (
+    AssignmentNotFound,
+    IneligibleRecipient,
+    InvalidReassignmentRequest,
+)
 from ticket.domain.outbox.entity.outbox_event_entity import OutboxEvent
 from ticket.domain.rotation.round_robin_aggregate import RoundRobinAggregate
 from ticket.domain.rotation.round_robin_scope import RoundRobinScope
@@ -21,41 +28,50 @@ from ticket.domain.ticket.entity.ticket_activity_entity import TicketActivityEnt
 from ticket.domain.ticket.ticket_activity_type import TicketActivityType
 from ticket.domain.ticket.ticket_aggregate import TicketAggregrate
 
-from ticket.application.assignment.assignment_service_interface import IAssignmentService
-from ticket.application.interfaces.assignment_repository_interface import IAssignmentRepository
+from ticket.application.assignment.assignment_service_interface import (
+    IAssignmentService,
+)
+from ticket.application.interfaces.assignment_repository_interface import (
+    IAssignmentRepository,
+)
 from ticket.application.interfaces.ticket_repository_interface import ITicketRepository
 from ticket.application.shared.id_generator_interface import IIdGenerator
 from ticket.application.exceptions.ticket_exception import TicketNotFound
-from ticket.application.assignment.exceptions.index import AlreadyDispatched, TeamNotFound, AgentNotFound
+from ticket.application.assignment.exceptions.index import (
+    AlreadyDispatched,
+    TeamNotFound,
+    AgentNotFound,
+)
 from ticket.application.shared.date_time_provider_interface import IDateTimeProvider
 from ticket.application.assignment.dto.assignment_dto import (
     AgentRecipientResponseDTO,
     TeamAssignmentDTO,
     TeamRecipientResponseDTO,
     AssignmentResponseDTO,
-    ReassignmentDTO
+    ReassignmentDTO,
 )
 from ticket.application.shared.unit_of_work_interface import IUnitOfWork
 from ticket.application.shared.organization_client_interface import IOrganizationClient
 from ticket.application.assignment.dto.team_data_dto import TeamDetailResponseDTO
-from ticket.application.interfaces.round_robin_repository_interface import IRoundRobinRepository
+from ticket.application.interfaces.round_robin_repository_interface import (
+    IRoundRobinRepository,
+)
 
 from ticket.config import settings
 
-class AssignmentService(IAssignmentService):
 
+class AssignmentService(IAssignmentService):
     def __init__(
         self,
-        assignment_repository : IAssignmentRepository,
-        ticket_repository : ITicketRepository,
-        round_robin_repository : IRoundRobinRepository,
-        outbox_repository : IOutboxRepository,
-        organization_client : IOrganizationClient,
-        id_generator : IIdGenerator,
-        datetime_provider : IDateTimeProvider,
-        unit_of_work : IUnitOfWork
-
-    ): 
+        assignment_repository: IAssignmentRepository,
+        ticket_repository: ITicketRepository,
+        round_robin_repository: IRoundRobinRepository,
+        outbox_repository: IOutboxRepository,
+        organization_client: IOrganizationClient,
+        id_generator: IIdGenerator,
+        datetime_provider: IDateTimeProvider,
+        unit_of_work: IUnitOfWork,
+    ):
         self.assignment_repository = assignment_repository
         self.ticket_repository = ticket_repository
         self.outbox_repository = outbox_repository
@@ -75,11 +91,11 @@ class AssignmentService(IAssignmentService):
         if not candidates:
             raise IneligibleRecipient("No eligible candidates available")
 
-        rotation: RoundRobinAggregate | None = (
-            await self.round_robin_repository.get_by_scope(
-                scope_type=scope_type,
-                scope_id=scope_id,
-            )
+        rotation: (
+            RoundRobinAggregate | None
+        ) = await self.round_robin_repository.get_by_scope(
+            scope_type=scope_type,
+            scope_id=scope_id,
         )
 
         is_new = rotation is None
@@ -107,9 +123,7 @@ class AssignmentService(IAssignmentService):
         team_ids = [team.team_id for team in teams]
 
         if len(team_ids) != len(set(team_ids)):
-            raise InvalidReassignmentRequest(
-                "Duplicate team IDs are not allowed"
-            )
+            raise InvalidReassignmentRequest("Duplicate team IDs are not allowed")
 
         for team_data in teams:
             if len(team_data.agent_ids) != len(set(team_data.agent_ids)):
@@ -117,35 +131,24 @@ class AssignmentService(IAssignmentService):
                     f"Duplicate agents found in team {team_data.team_id}"
                 )
 
-        organization_teams = await self.organization_client.get_teams_by_id(
-            team_ids
-        )
+        organization_teams = await self.organization_client.get_teams_by_id(team_ids)
 
-        teams_map = {
-            team.id: team
-            for team in organization_teams
-        }
+        teams_map = {team.id: team for team in organization_teams}
 
         for team_data in teams:
-
             team = teams_map.get(team_data.team_id)
 
             if team is None:
                 raise TeamNotFound(team_data.team_id)
 
             if not team.is_active:
-                raise IneligibleRecipient(
-                    f"Team {team.id} is inactive"
-                )
+                raise IneligibleRecipient(f"Team {team.id} is inactive")
 
             active_agent_ids = {
-                member.user_id
-                for member in team.members
-                if member.is_active
+                member.user_id for member in team.members if member.is_active
             }
 
             for agent_id in team_data.agent_ids:
-
                 if agent_id not in active_agent_ids:
                     raise IneligibleRecipient(
                         f"Agent {agent_id} is not an active member "
@@ -168,9 +171,7 @@ class AssignmentService(IAssignmentService):
         current_assignment_id = ticket.current_assignment_id
 
         if current_assignment_id is None:
-            raise AssignmentNotFound(
-                "Ticket does not have an active assignment"
-            )
+            raise AssignmentNotFound("Ticket does not have an active assignment")
 
         current_assignment = await self.assignment_repository.get_by_id(
             current_assignment_id
@@ -179,8 +180,10 @@ class AssignmentService(IAssignmentService):
         if current_assignment is None:
             raise AssignmentNotFound(current_assignment_id)
 
-        if current_assignment.responsible_agent_id != actor_id :
-            raise IneligibleRecipient("You don't have ticket claim to perform this action")
+        if current_assignment.responsible_agent_id != actor_id:
+            raise IneligibleRecipient(
+                "You don't have ticket claim to perform this action"
+            )
 
         await self._validate_reassignment_targets(request.teams)
 
@@ -193,12 +196,12 @@ class AssignmentService(IAssignmentService):
             assignment_type=assignment_type,
             assigned_at=now,
             assigned_by=actor_id,
-            acknowledgment_deadline_at=now + timedelta(hours=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS),
-            resolution_deadline_at=now + timedelta(hours=settings.RESOLUTION_DEADLINE_IN_HOURS),
+            acknowledgment_deadline_at=now
+            + timedelta(minutes=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS),
+            resolution_deadline_at=now
+            + timedelta(minutes=settings.RESOLUTION_DEADLINE_IN_HOURS),
         )
-
         for team_data in request.teams:
-
             team_recipient_id = self.id_generator.generate_team_recipient_id()
 
             team_recipient = TeamRecipientEntity.create(
@@ -209,54 +212,62 @@ class AssignmentService(IAssignmentService):
             )
 
             for agent_id in team_data.agent_ids:
-
                 agent_recipient_id = self.id_generator.generate_agent_recipient_id()
                 agent_recipient = AgentRecipientEntity.create(
                     id=agent_recipient_id,
                     team_recipient_id=team_recipient_id,
                     agent_id=agent_id,
                     can_claim=True,
-                    created_at=now
+                    created_at=now,
                 )
 
                 team_recipient.add_agents([agent_recipient])
 
             new_assignment.add_team_recipient([team_recipient])
 
-        current_assignment.mark_superseded(
-            at=now
-        )
+        current_assignment.mark_superseded(at=now)
 
         ticket.reassign(
             assignment_id=new_assignment.id,
         )
 
-        activity_id : str = self.id_generator.generate_ticket_activities_id()
-        activity = TicketActivityEntity.create(
-            id=actor_id,
-            ticket_id=ticket_id,
+        activity_id: str = self.id_generator.generate_ticket_activities_id()
+        ticket.record_activity(
+            activity_id=activity_id,
             activity_type=activity_type,
             actor_id=actor_id,
             created_at=now,
         )
-        ticket.record_activity(
-            activity_id=actor_id,
-            activity_type=activity_type,
-            actor_id=actor_id
-        )
 
-        event_data : TicketForwardedEvent = TicketForwardedEvent(
+        last_assignment_id = current_assignment_id
+        if last_assignment_id is None:
+            raise InvalidReassignmentRequest(
+                "Ticket should have dispatched assignment first"
+            )
+
+        last_assignment: AssignmentAggregate | None = current_assignment
+
+        if last_assignment is None:
+            raise AssignmentNotFound("Assignment not found")
+
+        event_data: TicketReassignmentEvent = TicketReassignmentEvent(
             ticket_id=ticket_id,
-            assignment_id=assignment_id
+            previous_assignment_id=current_assignment_id,
+            new_assignment_id=assignment_id,
+            actor_id=actor_id,
+            previous_team_id=current_assignment.responsible_team_id,
+            previous_agent_id=current_assignment.responsible_agent_id,
+            new_team_ids=[t.team_id for t in request.teams],
+            new_agent_ids=[agent_id for t in request.teams for agent_id in t.agent_ids],
         )
 
-        if assignment_type == AssignmentType.FORWARD : 
+        if assignment_type == AssignmentType.FORWARD:
             event = OutboxEvent.create(
                 key=actor_id,
                 event_id=self.id_generator.generate_event_id(),
                 event_type="ticket.forwarded",
                 occurred_at=self.datetime_provider.now(),
-                data=event_data.model_dump(mode="json")
+                data=event_data.model_dump(mode="json"),
             )
             await self.outbox_repository.add(event=event)
 
@@ -266,7 +277,7 @@ class AssignmentService(IAssignmentService):
                 event_id=self.id_generator.generate_event_id(),
                 event_type="ticket.escalated",
                 occurred_at=self.datetime_provider.now(),
-                data=event_data.model_dump(mode="json")
+                data=event_data.model_dump(mode="json"),
             )
 
             await self.outbox_repository.add(event=event)
@@ -279,12 +290,11 @@ class AssignmentService(IAssignmentService):
 
         return new_assignment
 
-
     async def get_by_id(self, assignment_id: str) -> AssignmentResponseDTO:
 
         result = await self.assignment_repository.get_by_id(assignment_id=assignment_id)
 
-        if result is None: 
+        if result is None:
             raise ValueError("No such assignement")
 
         return self._to_response(result)
@@ -293,22 +303,18 @@ class AssignmentService(IAssignmentService):
 
         result = await self.assignment_repository.get_by_ticket_id(ticket_id=ticket_id)
 
-        return [
-            self._to_response(aggregate=aggregate)
-            for aggregate in result
-        ]
+        return [self._to_response(aggregate=aggregate) for aggregate in result]
 
-    async def get_all(self, query: AssignmentQueryDTO) -> PaginatedResponse[AssignmentResponseDTO]:
+    async def get_all(
+        self, query: AssignmentQueryDTO
+    ) -> PaginatedResponse[AssignmentResponseDTO]:
 
         result = await self.assignment_repository.get_all(query=query)
         return PaginatedResponse(
-            items=[
-                self._to_response(assignment)
-                for assignment in result.items
-            ],
+            items=[self._to_response(assignment) for assignment in result.items],
             total=result.total,
             page=result.page,
-            limit=result.limit
+            limit=result.limit,
         )
 
     async def dispatch(
@@ -316,33 +322,26 @@ class AssignmentService(IAssignmentService):
         ticket_id: str,
     ) -> AssignmentResponseDTO:
 
-        ticket: TicketAggregrate | None = (
-            await self.ticket_repository.get_by_id(
-                ticket_id=ticket_id
-            )
+        ticket: TicketAggregrate | None = await self.ticket_repository.get_by_id(
+            ticket_id=ticket_id
         )
 
         if ticket is None:
-            raise TicketNotFound(
-                f"Ticket with id: {ticket_id} not found"
-            )
+            raise TicketNotFound(f"Ticket with id: {ticket_id} not found")
 
         if ticket.has_initial_assignment():
-            raise AlreadyDispatched(
-                "Ticket has already been dispatched"
-            )
+            raise AlreadyDispatched("Ticket has already been dispatched")
 
-        teams: list[TeamDetailResponseDTO] = (
-            await self.organization_client.get_teams_by_category(
-                category_id=ticket.category_id
-            )
+        teams: list[
+            TeamDetailResponseDTO
+        ] = await self.organization_client.get_teams_by_category(
+            category_id=ticket.category_id
         )
 
         eligible_teams = [
             team
             for team in teams
-            if team.is_active
-            and any(member.is_active for member in team.members)
+            if team.is_active and any(member.is_active for member in team.members)
         ]
 
         if not eligible_teams:
@@ -351,42 +350,31 @@ class AssignmentService(IAssignmentService):
         selected_team_id = await self._select_next(
             scope_type=RoundRobinScope.TEAM,
             scope_id=ticket.category_id,
-            candidates=[
-                team.id
-                for team in eligible_teams
-            ],
+            candidates=[team.id for team in eligible_teams],
         )
 
+        print(selected_team_id) 
         selected_team = next(
-            team
-            for team in eligible_teams
-            if team.id == selected_team_id
+            team for team in eligible_teams if team.id == selected_team_id
         )
+
+        print(selected_team.id)
 
         eligible_members = [
-            member
-            for member in selected_team.members
-            if member.is_active
+            member for member in selected_team.members if member.is_active
         ]
 
         if not eligible_members:
-            raise AgentNotFound(
-                "No eligible agents found in selected team"
-            )
+            raise AgentNotFound("No eligible agents found in selected team")
 
         primary_agent_id = await self._select_next(
             scope_type=RoundRobinScope.AGENT,
             scope_id=selected_team_id,
-            candidates=[
-                member.user_id
-                for member in eligible_members
-            ],
+            candidates=[member.user_id for member in eligible_members],
         )
 
         now = self.datetime_provider.now()
-        assignment_id = (
-            self.id_generator.generate_ticket_assignment_id()
-        )
+        assignment_id = self.id_generator.generate_ticket_assignment_id()
         assignment = AssignmentAggregate.create(
             id=assignment_id,
             ticket_id=ticket.id,
@@ -394,22 +382,17 @@ class AssignmentService(IAssignmentService):
             assigned_at=now,
             assigned_by=None,
             acknowledgment_deadline_at=(
-                now + timedelta(
-                    hours=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS
-                )
+                now + timedelta(minutes=settings.ACKNOWLEDGEMENT_DEADLINE_IN_HOURS)
             ),
             resolution_deadline_at=(
-                now + timedelta(
-                    hours=settings.RESOLUTION_DEADLINE_IN_HOURS
-                )
+                now + timedelta(minutes=settings.RESOLUTION_DEADLINE_IN_HOURS)
             ),
             primary_agent_id=primary_agent_id,
             responsible_agent_id=primary_agent_id,
+            responsible_team_id=selected_team_id,
         )
 
-        team_recipient_id = (
-            self.id_generator.generate_team_recipient_id()
-        )
+        team_recipient_id = self.id_generator.generate_team_recipient_id()
         team_recipient = TeamRecipientEntity.create(
             id=team_recipient_id,
             assignment_id=assignment_id,
@@ -425,38 +408,34 @@ class AssignmentService(IAssignmentService):
                 team_recipient_id=team_recipient_id,
                 agent_id=member.user_id,
                 can_claim=(member.user_id == primary_agent_id),
-                created_at=now
+                created_at=now,
             )
 
             agent_recipients.append(agent_recipient)
 
-        team_recipient.add_agents(
-            agents=agent_recipients
-        )
+        team_recipient.add_agents(agents=agent_recipients)
 
-        assignment.add_team_recipient(
-            recipients=[team_recipient]
-        )
+        assignment.add_team_recipient(recipients=[team_recipient])
 
-        await self.assignment_repository.add(
-            aggregate=assignment
-        )
+        await self.assignment_repository.add(aggregate=assignment)
 
         ticket.record_activity(
-            activity_id=(
-                self.id_generator.generate_ticket_activities_id()
-            ),
+            activity_id=(self.id_generator.generate_ticket_activities_id()),
             activity_type=TicketActivityType.DISPATCHED,
             actor_id=None,
+            created_at=now,
         )
 
-        ticket.dispatch(
-            assignment_id=assignment_id
-        )
+        ticket.dispatch(assignment_id=assignment_id)
 
-        event_data : TicketDispatchedEvent = TicketDispatchedEvent(
+        event_data: TicketDispatchedEvent = TicketDispatchedEvent(
             ticket_id=ticket_id,
-            assignment_id=assignment_id
+            assignment_id=assignment_id,
+            assignment_type=AssignmentType.DISPATCH,
+            team_id=assignment.responsible_team_id,
+            primary_agent_id=assignment.primary_agent_id,
+            responsible_agent_id=assignment.responsible_agent_id,
+            eligible_agent_ids=[agent.agent_id for agent in agent_recipients],
         )
 
         event = OutboxEvent.create(
@@ -464,7 +443,7 @@ class AssignmentService(IAssignmentService):
             event_id=self.id_generator.generate_event_id(),
             event_type="ticket.dispatched",
             occurred_at=now,
-            data=event_data.model_dump(mode="json")
+            data=event_data.model_dump(mode="json"),
         )
 
         await self.ticket_repository.update(ticket)
@@ -474,45 +453,43 @@ class AssignmentService(IAssignmentService):
 
         return self._to_response(assignment)
 
-
-    async def forward(self, ticket_id : str, actor_id : str, payload: ReassignmentDTO) -> AssignmentResponseDTO:
+    async def forward(
+        self, ticket_id: str, actor_id: str, payload: ReassignmentDTO
+    ) -> AssignmentResponseDTO:
         result = await self._create_reassignment(
             ticket_id=ticket_id,
             request=payload,
             actor_id=actor_id,
             assignment_type=AssignmentType.FORWARD,
-            activity_type=TicketActivityType.FORWARDED
+            activity_type=TicketActivityType.FORWARDED,
         )
-
 
         return self._to_response(result)
 
-    async def escalate(self, ticket_id : str, actor_id : str, payload: ReassignmentDTO) -> AssignmentResponseDTO:
+    async def escalate(
+        self, ticket_id: str, actor_id: str, payload: ReassignmentDTO
+    ) -> AssignmentResponseDTO:
         result = await self._create_reassignment(
             ticket_id=ticket_id,
             request=payload,
             actor_id=actor_id,
             assignment_type=AssignmentType.ESCALATION,
-            activity_type=TicketActivityType.ESCALATED
+            activity_type=TicketActivityType.ESCALATED,
         )
         return self._to_response(result)
 
-    async def claim_eligibility(self, assignment_id : str, agent_id : str) -> ClaimEligibilityResponse:
+    async def claim_eligibility(
+        self, assignment_id: str, agent_id: str
+    ) -> ClaimEligibilityResponse:
 
-        assignment = await self.assignment_repository.get_by_id(
-            assignment_id
-        )
+        assignment = await self.assignment_repository.get_by_id(assignment_id)
 
         if assignment is None:
-            raise AssignmentNotFound(
-                f"Assignment {assignment_id} not found"
-            )
+            raise AssignmentNotFound(f"Assignment {assignment_id} not found")
 
         can_claim = assignment.can_be_claimed_by(agent_id)
 
-        return ClaimEligibilityResponse(
-            can_claim=can_claim
-        )
+        return ClaimEligibilityResponse(can_claim=can_claim)
 
     @staticmethod
     def _to_response(
@@ -526,6 +503,7 @@ class AssignmentService(IAssignmentService):
             status=aggregate.status,
             primary_agent_id=aggregate.primary_agent_id,
             responsible_agent_id=aggregate.responsible_agent_id,
+            responsible_team_id=aggregate.responsible_team_id,
             team_recipients=[
                 TeamRecipientResponseDTO(
                     id=team.id,

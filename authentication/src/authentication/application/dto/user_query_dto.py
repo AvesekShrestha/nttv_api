@@ -7,7 +7,7 @@ from authentication.domain.users.user_role import UserRole
 
 class UserQueryDTO(BaseModel):
     page: int = Field(default=1, ge=1)
-    limit: int = Field(default=5, ge=1, le=5)
+    limit: int = Field(default=5, ge=1, le=100)
 
     role: UserRole | None = None
     level: str | None = Field(default=None, max_length=2)

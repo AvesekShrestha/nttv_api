@@ -25,7 +25,6 @@ class TeamUpdateDTO:
     name: str | None
     description: str | None
     category_id: str | None
-    level: Level | None
 
 
 @dataclass

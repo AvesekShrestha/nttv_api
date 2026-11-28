@@ -4,6 +4,7 @@ class AssignmentType(StrEnum):
     SYSTEM = "SYSTEM"
     FORWARD = "FORWARD"
     ESCALATION = "ESCALATION"
+    DISPATCH = "DISPATCH"
 
     @classmethod
     def from_string(cls, value: str) -> AssignmentType:

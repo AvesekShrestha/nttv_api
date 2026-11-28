@@ -1,4 +1,3 @@
-import re
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query

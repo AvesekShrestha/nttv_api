@@ -17,7 +17,7 @@ from authentication.config.container import  container
 router = APIRouter()
 
 @router.get("/", response_model=PaginatedResponse[CategoryResponseDTO])
-async def get_all(query : Annotated[CategoryQueryDTO, Query()] ,session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)):
+async def get_all(query : Annotated[CategoryQueryDTO, Query()] ,session : AsyncSession = Depends(get_session)):
 
     container.session.override(session)
     category_service = container.category_service()
@@ -26,7 +26,7 @@ async def get_all(query : Annotated[CategoryQueryDTO, Query()] ,session : AsyncS
     return result
 
 @router.get("/{category_id}", response_model=CategoryResponseDTO)
-async def get_by_id(category_id : str, session : AsyncSession = Depends(get_session), _ = Depends(get_current_user)):
+async def get_by_id(category_id : str, session : AsyncSession = Depends(get_session)):
 
     container.session.override(session)
     category_service = container.category_service()

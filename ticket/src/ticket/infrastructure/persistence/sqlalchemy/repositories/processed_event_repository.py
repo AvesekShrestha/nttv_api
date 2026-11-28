@@ -41,3 +41,4 @@ class ProcessedEventRepository(IProcessedEventRepository):
         )
 
         self.session.add(model)
+        await self.session.flush()

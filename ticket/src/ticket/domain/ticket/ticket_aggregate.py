@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Self
 
+from sqlalchemy.engine import create
+
 from ticket.domain.assignment.exceptions.assignment_exception import InitialAssignmentNotFound
 from ticket.domain.shared.aggregate import AggregrateRoot
 from ticket.domain.ticket.entity.ticket_activity_entity import TicketActivityEntity
@@ -106,12 +108,14 @@ class TicketAggregrate(AggregrateRoot[str]):
         activity_id: str,
         activity_type: str,
         actor_id: str | None,
+        created_at : datetime
     ) -> TicketActivityEntity:
         activity = TicketActivityEntity.create(
             id=activity_id,
             ticket_id=self.id,
             activity_type=activity_type,
             actor_id=actor_id,
+            created_at=created_at
         )
 
         self.add_activity(activity)
