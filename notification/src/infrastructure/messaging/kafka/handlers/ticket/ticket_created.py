@@ -1,68 +1,58 @@
+import logging
+from typing import Any
 
-from datetime import datetime
-from typing import Any, Literal
+import httpx
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
-from src.infrastructure.messaging.kafka.handlers.ticket.shared import (
-    process_notifications,
+from src.application.notification.notify_ticket_created import (
+    NotifyTicketCreated,
+)
+from src.infrastructure.clients.ticket_client import TicketClient
+from src.infrastructure.identity.id_generator import IdGenerator
+from src.infrastructure.messaging.kafka.events.ticket.ticket_created_event import (
+    TicketCreatedEvent,
+)
+from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
+from src.infrastructure.persistence.sqlalchemy.repositories.inbox_repository import (
+    InboxRepository,
 )
 
-
-class EventModel(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        str_strip_whitespace=True,
-    )
+logger = logging.getLogger(__name__)
 
 
-class TicketCreatedSubject(EventModel):
-    type: Literal["ticket"]
-    id: str = Field(min_length=1)
+class TicketCreatedHandler:
+    def __init__(
+        self,
+        *,
+        http_client: httpx.AsyncClient,
+        source_topic: str,
+    ):
+        self.ticket_client = TicketClient(http_client)
+        self.source_topic = source_topic
 
+    async def __call__(self, payload: dict[str, Any]) -> None:
+        event = TicketCreatedEvent.model_validate(payload)
 
-class TicketCreatedRecipient(EventModel):
-    email: EmailStr
+        async with SessionLocal() as session:
+            repository = InboxRepository(
+                session=session,
+                id_generator=IdGenerator(),
+            )
 
+            use_case = NotifyTicketCreated(
+                ticket_client=self.ticket_client,
+                inbox_repository=repository,
+            )
 
-class TicketCreatedData(EventModel):
-    category: str = Field(min_length=1)
-    priority: str = Field(min_length=1)
-    level: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    recipients: list[TicketCreatedRecipient] = Field(min_length=1)
+            saved = await use_case.execute(
+                event_id=event.id,
+                occurred_at=event.occurred_at,
+                ticket_id=event.data.ticket_id,
+                source_topic=self.source_topic,
+            )
 
-
-class TicketCreatedEvent(EventModel):
-    event_id: str = Field(min_length=1)
-    event_type: Literal["ticket_created"]
-    occurred_at: datetime
-    subject: TicketCreatedSubject
-    data: TicketCreatedData
-
-
-def build_message(event: TicketCreatedEvent) -> str:
-    return (
-        "A new ticket has been created.\n\n"
-        f"Ticket ID: {event.subject.id}\n"
-        f"Title: {event.data.title}\n"
-        f"Category: {event.data.category}\n"
-        f"Priority: {event.data.priority}\n"
-        f"Support level: {event.data.level}\n"
-        f"Created at: {event.occurred_at.isoformat()}"
-    )
-
-
-async def handle(payload: dict[str, Any]) -> None:
-    event = TicketCreatedEvent.model_validate(payload)
-
-    await process_notifications(
-        event_id=event.event_id,
-        event_type=event.event_type,
-        recipients=[
-            str(recipient.email)
-            for recipient in event.data.recipients
-        ],
-        subject=f"[New Ticket] {event.data.title}",
-        message=build_message(event),
-    )
+        logger.info(
+            "Ticket creation %s: event_id=%s topic=%s",
+            "saved" if saved else "already processed",
+            event.id,
+            self.source_topic,
+        )

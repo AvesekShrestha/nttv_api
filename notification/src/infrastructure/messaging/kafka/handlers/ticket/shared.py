@@ -1,18 +1,14 @@
+
 import logging
 
-from src.application.delivery.delivery_service import DeliveryService
 from src.application.dto.create_notification_dto import (
     CreateNotificationRequest,
 )
-from src.application.notification.create_notification import CreateNotification
-from src.config.settings import settings
 from src.domain.notification.notification_channel import NotificationChannel
-from src.infrastructure.identity.id_generator import IdGenerator
-from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
-from src.infrastructure.persistence.sqlalchemy.repositories.notification_repository import (
-    SQLAlchemyNotificationRepository,
+from src.infrastructure.messaging.kafka.dependencies import (
+    get_create_notification,
 )
-from src.infrastructure.providers.smtp.smtp_email_sender import SmtpEmailSender
+from src.infrastructure.persistence.sqlalchemy.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +22,7 @@ async def process_notifications(
     message: str,
 ) -> None:
     async with SessionLocal() as session:
-        repository = SQLAlchemyNotificationRepository(session)
-        email_sender = SmtpEmailSender(settings=settings)
-
-        delivery_service = DeliveryService(
-            repository=repository,
-            email_sender=email_sender,
-        )
-
-        use_case = CreateNotification(
-            repository=repository,
-            id_generator=IdGenerator(),
-            delivery_service=delivery_service,
-        )
+        use_case = get_create_notification(session)
 
         try:
             for recipient in recipients:

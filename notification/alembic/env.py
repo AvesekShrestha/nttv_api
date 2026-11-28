@@ -5,8 +5,21 @@ from sqlalchemy import engine_from_config, pool
 
 from src.config.settings import settings
 from src.infrastructure.persistence.sqlalchemy.base import Base
+
 from src.infrastructure.persistence.sqlalchemy.models.notification_model import (
     NotificationModel,
+)
+from src.infrastructure.persistence.sqlalchemy.models.auth_delivery_receipt_model import (
+    AuthDeliveryReceiptModel,
+)
+from src.infrastructure.persistence.sqlalchemy.models.processed_event_model import (
+    ProcessedEventModel,
+)
+from src.infrastructure.persistence.sqlalchemy.models.inbox_notification_model import (
+    InboxNotificationModel,
+)
+from src.infrastructure.persistence.sqlalchemy.models.notification_delivery_model import (
+    NotificationDeliveryModel,
 )
 
 config = context.config

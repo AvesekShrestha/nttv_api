@@ -27,3 +27,15 @@ class NotificationRepositoryInterface(ABC):
         recipient: str,
     ) -> bool:
         pass
+
+    @abstractmethod
+    async def claim_for_delivery(self, notification_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def get_pending_delivery_ids(
+        self,
+        limit: int = 50,
+    ) -> list[str]:
+        pass
+

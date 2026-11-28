@@ -9,6 +9,7 @@ from src.application.interfaces.notification_repository_interface import (
 )
 from src.application.shared.email_sender_interface import EmailSenderInterface
 from src.domain.notification.notification_channel import NotificationChannel
+from src.domain.notification.notification_status import NotificationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -23,30 +24,32 @@ class DeliveryService(DeliveryServiceInterface):
         self._email_sender = email_sender
 
     async def deliver(self, notification_id: str) -> None:
-        logger.info("Delivery requested for notification_id=%s", notification_id)
+        claimed = await self._repository.claim_for_delivery(notification_id)
+
+        if not claimed:
+            logger.info(
+                "Notification not eligible for delivery: %s",
+                notification_id,
+            )
+            return
 
         notification = await self._repository.get_by_id(notification_id)
 
         if notification is None:
-            logger.warning("Notification not found: %s", notification_id)
-            return
-
-        if notification.channel != NotificationChannel.EMAIL:
-            logger.warning(
-                "Skipping notification %s: channel=%s",
-                notification_id,
-                notification.channel,
+            raise RuntimeError(
+                f"Claimed notification not found: {notification_id}"
             )
-            return
 
-        notification.mark_as_sending()
-        await self._repository.save(notification)
+        if notification.status != NotificationStatus.SENDING:
+            raise RuntimeError(
+                f"Unexpected notification status: {notification.status}"
+            )
 
         try:
-            logger.info(
-                "Calling email sender for notification_id=%s",
-                notification_id,
-            )
+            if notification.channel != NotificationChannel.EMAIL:
+                raise DeliveryError(
+                    f"Unsupported notification channel: {notification.channel}"
+                )
 
             await self._email_sender.send(
                 notification.recipient,
@@ -54,25 +57,21 @@ class DeliveryService(DeliveryServiceInterface):
                 notification.message,
             )
 
-            notification.mark_as_sent()
-            logger.info(
-                "Email sender succeeded for notification_id=%s",
-                notification_id,
-            )
-
         except DeliveryError as exc:
-            logger.exception(
-                "Email delivery failed for notification_id=%s",
-                notification_id,
-            )
             notification.mark_as_failed(str(exc))
+            await self._repository.save(notification)
 
-        except Exception:
-            logger.exception(
-                "Unexpected error during delivery for notification_id=%s",
+            logger.warning(
+                "Email delivery failed: notification_id=%s error=%s",
                 notification_id,
+                exc,
             )
-            raise
+            return
 
+        notification.mark_as_sent()
         await self._repository.save(notification)
-        logger.info("Final notification state saved: %s", notification_id)
+
+        logger.info(
+            "Email delivered successfully: notification_id=%s",
+            notification_id,
+        )

@@ -1,6 +1,10 @@
+
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from src.domain.exceptions.invalid_notification_state import (
+    InvalidNotificationStateError,
+)
 from src.domain.notification.notification_channel import NotificationChannel
 from src.domain.notification.notification_status import NotificationStatus
 from src.domain.shared.aggregate import AggregrateRoot
@@ -16,6 +20,8 @@ class NotificationAggregrate(AggregrateRoot[str]):
     _created_at: datetime | None = None
     _sent_at: datetime | None = None
     _failed_at: datetime | None = None
+    _last_error: str | None = None
+    _attempt_count: int = 0
 
     @property
     def recipient(self) -> str:
@@ -49,6 +55,14 @@ class NotificationAggregrate(AggregrateRoot[str]):
     def failed_at(self) -> datetime | None:
         return self._failed_at
 
+    @property
+    def last_error(self) -> str | None:
+        return self._last_error
+
+    @property
+    def attempt_count(self) -> int:
+        return self._attempt_count
+
     @staticmethod
     def create(
         id: str,
@@ -63,27 +77,38 @@ class NotificationAggregrate(AggregrateRoot[str]):
             _channel=channel,
             _subject=subject,
             _message=message,
-            _status=NotificationStatus.PENDING,
             _created_at=datetime.now(timezone.utc),
         )
 
     def mark_as_sending(self) -> None:
-        if self._status != NotificationStatus.PENDING:
-            raise ValueError("Notification must be pending before sending")
-
+        if self._status not in (
+            NotificationStatus.PENDING,
+            NotificationStatus.FAILED,
+        ):
+            raise InvalidNotificationStateError(
+                "Only pending or failed notifications can be sent"
+            )
+    
         self._status = NotificationStatus.SENDING
+        self._last_error = None
+        self._failed_at = None
 
     def mark_as_sent(self) -> None:
         if self._status != NotificationStatus.SENDING:
-            raise ValueError("Notification must be sending before marking as sent")
+            raise InvalidNotificationStateError(
+                "Notification must be sending before marking as sent"
+            )
 
         self._status = NotificationStatus.SENT
         self._sent_at = datetime.now(timezone.utc)
 
     def mark_as_failed(self, error: str) -> None:
         if self._status != NotificationStatus.SENDING:
-            raise ValueError("Notification must be sending before marking as failed")
+            raise InvalidNotificationStateError(
+                "Notification must be sending before marking as failed"
+            )
 
         self._status = NotificationStatus.FAILED
         self._last_error = error
         self._failed_at = datetime.now(timezone.utc)
+

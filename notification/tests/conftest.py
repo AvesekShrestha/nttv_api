@@ -2,18 +2,18 @@ from uuid import UUID
 
 import pytest
 
-from src.domain.notification.notification import Notification
+from src.domain.notification.notification_aggregate import NotificationAggregrate
 
 
 class FakeNotificationRepository:
     def __init__(self):
-        self.notifications: list[Notification] = []
+        self.notifications: list[NotificationAggregrate] = []
 
-    async def save(self, notification: Notification) -> Notification:
+    async def save(self, notification: NotificationAggregrate) -> NotificationAggregrate:
         self.notifications.append(notification)
         return notification
 
-    async def get_by_id(self, notification_id: UUID) -> Notification | None:
+    async def get_by_id(self, notification_id: UUID) -> NotificationAggregrate | None:
         return next(
             (n for n in self.notifications if n.id == notification_id),
             None,
